@@ -1,0 +1,144 @@
+{
+  "entities": {
+    "SchoolInfo": {
+      "title": "SchoolInfo",
+      "description": "Informasi profil dan identitas resmi SMPN 14 Tulang Bawang Barat",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 200 },
+        "shortName": { "type": "string", "maxLength": 100 },
+        "npsn": { "type": "string", "maxLength": 20 },
+        "accreditation": { "type": "string", "maxLength": 50 },
+        "headmaster": { "type": "string", "maxLength": 150 },
+        "mottoLocal": { "type": "string", "maxLength": 100 },
+        "mottoValues": { "type": "string", "maxLength": 100 },
+        "address": { "type": "string", "maxLength": 300 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "whatsapp": { "type": "string", "maxLength": 50 },
+        "email": { "type": "string", "maxLength": 100 },
+        "workingHours": { "type": "string", "maxLength": 100 },
+        "logoUrl": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "npsn", "headmaster"]
+    },
+    "Teacher": {
+      "title": "Teacher",
+      "description": "Data dewan guru dan tenaga kependidikan",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 150 },
+        "nip": { "type": "string", "maxLength": 50 },
+        "role": { "type": "string", "maxLength": 100 },
+        "subject": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string", "enum": ["pimpinan", "guru", "bk", "tendik"] },
+        "education": { "type": "string", "maxLength": 150 },
+        "initials": { "type": "string", "maxLength": 10 },
+        "bio": { "type": "string", "maxLength": 500 },
+        "colorScheme": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["name", "subject", "category"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Data peserta didik aktif SMPN 14 Tubaba",
+      "type": "object",
+      "properties": {
+        "nisn": { "type": "string", "maxLength": 20 },
+        "nis": { "type": "string", "maxLength": 20 },
+        "fullName": { "type": "string", "maxLength": 150 },
+        "gender": { "type": "string", "enum": ["Laki-laki", "Perempuan"] },
+        "grade": { "type": "string", "enum": ["VII", "VIII", "IX"] },
+        "rombel": { "type": "string", "maxLength": 50 },
+        "birthPlace": { "type": "string", "maxLength": 100 },
+        "birthDate": { "type": "string", "maxLength": 30 },
+        "address": { "type": "string", "maxLength": 250 },
+        "parentName": { "type": "string", "maxLength": 150 },
+        "parentPhone": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["nisn", "fullName", "gender", "grade", "rombel"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Warta pengumuman dan berita sekolah",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string", "enum": ["Akademik", "Kesiswaan", "PPDB", "Edaran", "Berita"] },
+        "date": { "type": "string", "maxLength": 50 },
+        "dateIso": { "type": "string", "maxLength": 30 },
+        "summary": { "type": "string", "maxLength": 500 },
+        "content": { "type": "string" },
+        "documentName": { "type": "string", "maxLength": 150 },
+        "documentUrl": { "type": "string" },
+        "important": { "type": "boolean" }
+      },
+      "required": ["title", "category", "content"]
+    },
+    "ActivityPhoto": {
+      "title": "ActivityPhoto",
+      "description": "Galeri foto kegiatan dan prestasi sekolah",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "maxLength": 50 },
+        "categoryLabel": { "type": "string", "maxLength": 100 },
+        "date": { "type": "string", "maxLength": 50 },
+        "location": { "type": "string", "maxLength": 150 },
+        "image": { "type": "string" },
+        "caption": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["title", "category", "image"]
+    },
+    "PPDBApplicant": {
+      "title": "PPDBApplicant",
+      "description": "Data pendaftar siswa baru PPDB Online",
+      "type": "object",
+      "properties": {
+        "registrationNumber": { "type": "string", "maxLength": 50 },
+        "fullName": { "type": "string", "maxLength": 150 },
+        "nisn": { "type": "string", "maxLength": 20 },
+        "nik": { "type": "string", "maxLength": 30 },
+        "birthPlace": { "type": "string", "maxLength": 100 },
+        "birthDate": { "type": "string", "maxLength": 30 },
+        "gender": { "type": "string", "enum": ["Laki-laki", "Perempuan"] },
+        "previousSchool": { "type": "string", "maxLength": 150 },
+        "track": { "type": "string", "enum": ["Zonasi", "Prestasi", "Afirmasi", "Pindah Tugas"] },
+        "parentName": { "type": "string", "maxLength": 150 },
+        "parentPhone": { "type": "string", "maxLength": 50 },
+        "address": { "type": "string", "maxLength": 250 },
+        "submissionDate": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "enum": ["Terverifikasi", "Menunggu Berkas", "Lolos Seleksi", "Cadangan"] },
+        "notes": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["registrationNumber", "fullName", "nisn", "track"]
+    }
+  },
+  "firestore": {
+    "/school_info/{id}": {
+      "schema": "SchoolInfo",
+      "description": "Informasi umum sekolah"
+    },
+    "/teachers/{teacherId}": {
+      "schema": "Teacher",
+      "description": "Daftar dewan guru"
+    },
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Daftar peserta didik aktif"
+    },
+    "/announcements/{announcementId}": {
+      "schema": "Announcement",
+      "description": "Daftar pengumuman dan warta berita"
+    },
+    "/activities/{activityId}": {
+      "schema": "ActivityPhoto",
+      "description": "Daftar foto kegiatan"
+    },
+    "/ppdb_applicants/{applicantId}": {
+      "schema": "PPDBApplicant",
+      "description": "Pendaftaran calon siswa baru"
+    }
+  }
+}

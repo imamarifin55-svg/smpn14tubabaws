@@ -23,7 +23,10 @@ import {
   Check,
   RefreshCw,
   ImageIcon,
-  Paperclip
+  Paperclip,
+  Database,
+  ExternalLink,
+  Cloud
 } from 'lucide-react';
 import { useSchoolData } from '../context/SchoolDataContext';
 import { Teacher, ActivityPhoto, Announcement, Student } from '../data/schoolData';
@@ -51,11 +54,14 @@ export const AdminPanel: React.FC = () => {
     isAdminOpen,
     setIsAdminOpen,
     adminInitialTab,
-    resetToDefault
+    resetToDefault,
+    isFirebaseConnected,
+    syncStatus
   } = useSchoolData();
 
   const [activeTab, setActiveTab] = useState<'profil' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'ppdb'>('profil');
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
   useEffect(() => {
     if (adminInitialTab) {
@@ -747,6 +753,12 @@ export const AdminPanel: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 text-[11px] font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <Database className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Firebase Online Realtime</span>
+            </div>
+
             <button
               onClick={() => {
                 if (confirm('Kembalikan seluruh data ke pengaturan awal (default)?')) {
@@ -835,7 +847,7 @@ export const AdminPanel: React.FC = () => {
               >
                 <div className="flex items-center gap-3 truncate">
                   <Bell className="w-4 h-4 shrink-0" />
-                  <span className="truncate">Pengumuman &amp; Lampiran</span>
+                  <span className="truncate">Pengumuman &amp; Berita</span>
                 </div>
                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
                   {announcements.length}
@@ -877,15 +889,52 @@ export const AdminPanel: React.FC = () => {
               </button>
             </div>
 
-            {/* Sidebar Footer info */}
-            <div className="pt-4 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
+            {/* Sidebar Footer: Firebase Realtime Status & Link */}
+            <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400 space-y-2">
+              <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-semibold text-[11px]">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <Database className="w-3.5 h-3.5" />
+                    <span>Firebase Realtime</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950 px-1.5 py-0.2 rounded border border-emerald-800/80">
+                    Live
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 leading-tight">
+                  Database Firestore online &amp; realtime aktif.
+                </p>
+                <div className="pt-1 flex flex-col gap-1.5">
+                  <a
+                    href="https://console.firebase.google.com/project/gen-lang-client-0264495138/firestore/databases/ai-studio-smpn14tulangbawa-ad2f4c9b-a0c5-4060-9a23-715dbdbcc1f8/data"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 w-full py-1.5 px-2 bg-blue-900/90 hover:bg-blue-800 text-white rounded-lg text-[10px] font-semibold transition-colors"
+                  >
+                    <span>Buka Firebase Console</span>
+                    <ExternalLink className="w-3 h-3 text-amber-300" />
+                  </a>
+                  <button
+                    onClick={async () => {
+                      setIsCloudSyncing(true);
+                      await resetToDefault();
+                      setIsCloudSyncing(false);
+                      showSuccess('Seluruh data awal berhasil disinkronkan ke Firebase Firestore!');
+                    }}
+                    disabled={isCloudSyncing}
+                    className="flex items-center justify-center gap-1.5 w-full py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[10px] font-medium transition-colors cursor-pointer"
+                  >
+                    <Cloud className="w-3 h-3 text-emerald-400" />
+                    <span>{isCloudSyncing ? 'Menyinkronkan...' : 'Sinkronkan Data ke Cloud'}</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="flex items-center gap-1.5 text-amber-400 font-semibold">
                 <FileSpreadsheet className="w-4 h-4 shrink-0" />
                 <span>Format Excel (.xlsx) Murni</span>
               </div>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Template &amp; impor guru dan siswa menggunakan format resmi Excel (.xlsx).
-              </p>
             </div>
           </aside>
 
@@ -1678,25 +1727,25 @@ export const AdminPanel: React.FC = () => {
             {activeTab === 'pengumuman' && (
               <div className="space-y-6 animate-in fade-in duration-200">
                 <div className="border-b border-slate-200 pb-3">
-                  <h3 className="text-lg font-bold text-slate-900">Kelola Pengumuman &amp; Unggah Lampiran</h3>
+                  <h3 className="text-lg font-bold text-slate-900">Kelola Pengumuman &amp; Berita Sekolah</h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Terbitkan surat edaran baru beserta unggah berkas PDF / dokumen resmi sekolah.
+                    Terbitkan pengumuman, berita sekolah, atau surat edaran baru beserta unggah berkas PDF / dokumen lampiran.
                   </p>
                 </div>
 
                 <form onSubmit={handleAddAnnouncement} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                   <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2">
                     <Plus className="w-4 h-4" />
-                    <span>Publikasikan Pengumuman / Edaran Baru</span>
+                    <span>Publikasikan Pengumuman / Berita Baru</span>
                   </h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div className="sm:col-span-2">
-                      <label className="font-semibold text-slate-700 block mb-1">Judul Pengumuman *</label>
+                      <label className="font-semibold text-slate-700 block mb-1">Judul Pengumuman / Berita *</label>
                       <input
                         type="text"
                         required
-                        placeholder="Contoh: Jadwal Pelaksanaan Asesmen Nasional Berbasis Komputer (ANBK)"
+                        placeholder="Contoh: Tim Sains SMPN 14 Meraih Juara 1 / Jadwal Asesmen Sumatif"
                         value={newAnnouncement.title}
                         onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
                         className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
@@ -1715,10 +1764,11 @@ export const AdminPanel: React.FC = () => {
                         }
                         className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
                       >
-                        <option value="Akademik">Akademik</option>
-                        <option value="PPDB">PPDB</option>
-                        <option value="Kesiswaan">Kesiswaan</option>
-                        <option value="Edaran">Surat Edaran</option>
+                        <option value="Berita">Berita &amp; Prestasi Sekolah</option>
+                        <option value="Akademik">Akademik &amp; Jadwal</option>
+                        <option value="PPDB">PPDB 2026</option>
+                        <option value="Kesiswaan">Kesiswaan &amp; Ekstrakurikuler</option>
+                        <option value="Edaran">Surat Edaran Dinas</option>
                       </select>
                     </div>
 

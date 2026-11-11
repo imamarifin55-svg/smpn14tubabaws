@@ -21,7 +21,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'profil', label: 'Profil & Guru' },
     { id: 'peserta-didik', label: 'Peserta Didik' },
     { id: 'galeri', label: 'Galeri Kegiatan' },
-    { id: 'pengumuman', label: 'Pengumuman' },
+    { id: 'pengumuman', label: 'Pengumuman & Berita' },
     { id: 'ppdb', label: 'PPDB Online' },
     { id: 'kontak', label: 'Kontak' }
   ];

@@ -11,7 +11,8 @@ export const AnnouncementsSection: React.FC = () => {
   const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null);
 
   const tabs = [
-    { id: 'all', label: 'Semua Pengumuman' },
+    { id: 'all', label: 'Semua Pengumuman & Berita' },
+    { id: 'Berita', label: 'Berita Terkini' },
     { id: 'PPDB', label: 'PPDB 2026' },
     { id: 'Akademik', label: 'Jadwal & Akademik' },
     { id: 'Kesiswaan', label: 'Kegiatan Siswa' },
@@ -69,14 +70,14 @@ export const AnnouncementsSection: React.FC = () => {
               <Bell className="w-4 h-4 text-amber-600" />
               <span>Warta Sekolah</span>
               <span aria-hidden="true">·</span>
-              <span>Papan Informasi Resmi</span>
+              <span>Papan Informasi &amp; Berita</span>
             </div>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
-              Pengumuman Akademik &amp; Edaran Dinas
+              Pengumuman &amp; Berita Sekolah
             </h2>
             <p className="mt-2 text-sm sm:text-base text-slate-600 max-w-2xl">
-              Informasi terkini mengenai agenda pembelajaran, jadwal ujian sumatif, petunjuk teknis PPDB, 
-              serta surat edaran resmi bagi orang tua dan siswa.
+              Informasi terkini mengenai agenda pembelajaran, berita prestasi, agenda kegiatan, petunjuk teknis PPDB, 
+              serta surat edaran dinas resmi bagi orang tua dan siswa.
             </p>
           </div>
 
@@ -87,7 +88,7 @@ export const AnnouncementsSection: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari kata kunci pengumuman..."
+              placeholder="Cari kata kunci pengumuman atau berita..."
               className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 shadow-xs"
             />
           </div>

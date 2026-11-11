@@ -27,7 +27,7 @@ export interface ActivityPhoto {
 export interface Announcement {
   id: string;
   title: string;
-  category: 'Akademik' | 'Kesiswaan' | 'PPDB' | 'Edaran';
+  category: 'Akademik' | 'Kesiswaan' | 'PPDB' | 'Edaran' | 'Berita';
   date: string;
   dateIso: string;
   summary: string;
@@ -464,6 +464,17 @@ export const SCHOOL_ACTIVITIES: ActivityPhoto[] = [
 ];
 
 export const ANNOUNCEMENTS: Announcement[] = [
+  {
+    id: 'ann-news-1',
+    title: 'Siswa SMPN 14 Tulang Bawang Barat Raih Juara 1 Lomba Sains & Robotik Tingkat Provinsi',
+    category: 'Berita',
+    date: '28 Oktober 2026',
+    dateIso: '2026-10-28',
+    summary: 'Kabar membanggakan datang dari tim robotik dan inovasi sains SMPN 14 Tubaba yang berhasil meraih medali emas pada ajang bergengsi tingkat Provinsi Lampung.',
+    content: `Civitas akademika SMP Negeri 14 Tulang Bawang Barat mengucapkan selamat dan apresiasi setinggi-tingginya kepada siswa-siswi pembina klub sains yang berhasil mengharumkan nama sekolah di tingkat Provinsi Lampung. Prestasi ini membuktikan semangat Nenemo (Nemen, Nedes, Nerimo) dan filosofi Ragem Sai Mangi Wawai yang senantiasa ditanamkan dalam keseharian belajar.`,
+    documentName: 'Sertifikat_Juara_Sains_2026.pdf',
+    important: true
+  },
   {
     id: 'ann-1',
     title: 'Petunjuk Teknis Penerimaan Peserta Didik Baru (PPDB) Tahun Ajaran 2026/2027',

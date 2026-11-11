@@ -129,7 +129,7 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a href="#pengumuman" className="text-slate-400 hover:text-white transition-colors">
-                  Pengumuman Akademik
+                  Pengumuman &amp; Berita
                 </a>
               </li>
               <li>
