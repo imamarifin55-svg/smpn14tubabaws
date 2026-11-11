@@ -1,0 +1,6 @@
+{
+  "name": "SMPN 14 Tulang Bawang Barat",
+  "description": "Website Resmi SMP Negeri 14 Tulang Bawang Barat - Galeri Kegiatan, Direktori Guru, Pengumuman Akademik, dan Portal PPDB Online.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

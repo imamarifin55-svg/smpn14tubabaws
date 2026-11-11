@@ -1,0 +1,2100 @@
+import React, { useState, useEffect, useRef } from 'react';
+import * as XLSX from 'xlsx';
+import {
+  X,
+  Settings,
+  School,
+  GraduationCap,
+  Bell,
+  Camera,
+  UserCheck,
+  Users,
+  Plus,
+  Trash2,
+  Save,
+  RotateCcw,
+  CheckCircle2,
+  AlertCircle,
+  Download,
+  Upload,
+  FileSpreadsheet,
+  FileText,
+  Search,
+  Check,
+  RefreshCw,
+  ImageIcon,
+  Paperclip
+} from 'lucide-react';
+import { useSchoolData } from '../context/SchoolDataContext';
+import { Teacher, ActivityPhoto, Announcement, Student } from '../data/schoolData';
+
+export const AdminPanel: React.FC = () => {
+  const {
+    schoolInfo,
+    updateSchoolInfo,
+    teachers,
+    addTeacher,
+    deleteTeacher,
+    importTeachers,
+    students,
+    addStudent,
+    deleteStudent,
+    importStudents,
+    announcements,
+    addAnnouncement,
+    deleteAnnouncement,
+    activities,
+    addActivity,
+    deleteActivity,
+    applicants,
+    updateApplicantStatus,
+    isAdminOpen,
+    setIsAdminOpen,
+    adminInitialTab,
+    resetToDefault
+  } = useSchoolData();
+
+  const [activeTab, setActiveTab] = useState<'profil' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'ppdb'>('profil');
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (adminInitialTab) {
+      setActiveTab(adminInitialTab);
+    }
+  }, [adminInitialTab, isAdminOpen]);
+
+  // Form states for Profil (including logoUrl)
+  const [profileForm, setProfileForm] = useState({
+    name: schoolInfo.name,
+    headmaster: schoolInfo.headmaster,
+    npsn: schoolInfo.npsn,
+    accreditation: schoolInfo.accreditation,
+    address: schoolInfo.address,
+    phone: schoolInfo.phone,
+    whatsapp: schoolInfo.whatsapp,
+    email: schoolInfo.email,
+    workingHours: schoolInfo.workingHours,
+    logoUrl: schoolInfo.logoUrl || ''
+  });
+
+  // Keep profileForm in sync when schoolInfo changes
+  useEffect(() => {
+    setProfileForm({
+      name: schoolInfo.name,
+      headmaster: schoolInfo.headmaster,
+      npsn: schoolInfo.npsn,
+      accreditation: schoolInfo.accreditation,
+      address: schoolInfo.address,
+      phone: schoolInfo.phone,
+      whatsapp: schoolInfo.whatsapp,
+      email: schoolInfo.email,
+      workingHours: schoolInfo.workingHours,
+      logoUrl: schoolInfo.logoUrl || ''
+    });
+  }, [schoolInfo]);
+
+  // Logo upload ref
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  // Form states for New Teacher
+  const [newTeacher, setNewTeacher] = useState({
+    name: '',
+    nip: '',
+    role: '',
+    subject: '',
+    category: 'guru' as Teacher['category'],
+    education: '',
+    bio: ''
+  });
+
+  // State for Teacher Excel Import
+  const [teacherImportStatus, setTeacherImportStatus] = useState<{
+    total: number;
+    preview: Teacher[];
+  } | null>(null);
+  const teacherFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Form states for Single Student Add
+  const [newStudent, setNewStudent] = useState({
+    nisn: '',
+    nis: '',
+    fullName: '',
+    gender: 'Laki-laki' as 'Laki-laki' | 'Perempuan',
+    grade: 'VII' as 'VII' | 'VIII' | 'IX',
+    rombel: 'VII-A',
+    birthPlace: 'Tulang Bawang Barat',
+    birthDate: '2013-05-14',
+    address: '',
+    parentName: '',
+    parentPhone: ''
+  });
+
+  // State for Student Excel Import
+  const [studentImportStatus, setStudentImportStatus] = useState<{
+    total: number;
+    preview: Student[];
+  } | null>(null);
+  const studentFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Filter & Search inside Admin Students Tab
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentGradeFilter, setStudentGradeFilter] = useState<'all' | 'VII' | 'VIII' | 'IX'>('all');
+
+  // Form states for New Announcement (with file upload attachment)
+  const [newAnnouncement, setNewAnnouncement] = useState({
+    title: '',
+    category: 'Akademik' as Announcement['category'],
+    summary: '',
+    content: '',
+    documentName: 'Surat_Edaran_2026.pdf',
+    documentUrl: ''
+  });
+  const announcementFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Form states for New Activity (with photo image upload)
+  const [newActivity, setNewActivity] = useState({
+    title: '',
+    category: 'akademik' as ActivityPhoto['category'],
+    categoryLabel: 'Sains & Lab',
+    location: 'Kampus SMPN 14 Tubaba',
+    caption: '',
+    image: ''
+  });
+  const activityImageInputRef = useRef<HTMLInputElement>(null);
+
+  if (!isAdminOpen) return null;
+
+  const showSuccess = (msg: string) => {
+    setSuccessToast(msg);
+    setTimeout(() => setSuccessToast(null), 2500);
+  };
+
+  // 1. Logo upload handler
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Mohon pilih file gambar (PNG, JPG, SVG, WebP).');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Ukuran file logo maksimal 2MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setProfileForm((prev) => ({ ...prev, logoUrl: base64 }));
+      showSuccess('Logo berhasil dimuat! Klik Simpan Perubahan Profil untuk menerapkan.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateSchoolInfo({
+      ...schoolInfo,
+      ...profileForm
+    });
+    showSuccess('Profil sekolah & logo berhasil disimpan!');
+  };
+
+  // 2. Teacher Add & Excel Template/Import
+  const handleAddTeacher = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTeacher.name || !newTeacher.subject) return;
+
+    const teacherToAdd: Teacher = {
+      id: 'teacher-' + Date.now(),
+      name: newTeacher.name,
+      nip: newTeacher.nip || '-',
+      role: newTeacher.role || 'Guru Mata Pelajaran',
+      subject: newTeacher.subject,
+      category: newTeacher.category,
+      education: newTeacher.education || 'S1 Pendidikan',
+      initials: newTeacher.name
+        .split(' ')
+        .map((w) => w[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase(),
+      bio: newTeacher.bio || 'Mendidik dengan hati dan keteladanan di SMPN 14 Tubaba.',
+      colorScheme: 'from-blue-700 to-indigo-900'
+    };
+
+    addTeacher(teacherToAdd);
+    setNewTeacher({
+      name: '',
+      nip: '',
+      role: '',
+      subject: '',
+      category: 'guru',
+      education: '',
+      bio: ''
+    });
+    showSuccess('Data guru baru berhasil ditambahkan!');
+  };
+
+  // Teacher Excel Template Download (.xlsx ONLY)
+  const handleDownloadTeacherTemplate = () => {
+    const headers = [
+      'NAMA_LENGKAP',
+      'NIP',
+      'MATA_PELAJARAN',
+      'JABATAN_PERAN',
+      'KATEGORI',
+      'PENDIDIKAN_TERAKHIR',
+      'CATATAN_BIO'
+    ];
+
+    const sampleRows = [
+      [
+        'Drs. H. Sukamto, M.Pd.',
+        '19680315 199303 1 004',
+        'Manajemen Pendidikan & Pembina Upacara',
+        'Kepala Sekolah',
+        'pimpinan',
+        'S2 Magister Pendidikan (FKIP Universitas Lampung)',
+        'Berpengalaman di dunia pendidikan dasar & menengah'
+      ],
+      [
+        'Dra. Hj. Nuraini, M.Pd.',
+        '19710512 199802 2 002',
+        'Bahasa Indonesia',
+        'Wakil Kepala Sekolah Bidang Kurikulum',
+        'pimpinan',
+        'S2 Pendidikan Bahasa Indonesia (UNILA)',
+        'Penggerak Kurikulum Merdeka'
+      ],
+      [
+        'Budi Santoso, S.Pd.',
+        '19890412 201402 1 005',
+        'Ilmu Pengetahuan Alam (IPA)',
+        'Guru Mata Pelajaran',
+        'guru',
+        'S1 Pendidikan Fisika (ITERA)',
+        'Pembina Klub Sains Sekolah'
+      ]
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 28 },
+      { wch: 24 },
+      { wch: 30 },
+      { wch: 25 },
+      { wch: 14 },
+      { wch: 35 },
+      { wch: 40 }
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Dewan Guru');
+    XLSX.writeFile(wb, 'Template_Data_Guru_SMPN14_Tubaba.xlsx');
+    showSuccess('Template Excel Guru (.xlsx) berhasil diunduh!');
+  };
+
+  // Teacher Excel Upload (.xlsx / .xls)
+  const handleTeacherExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rawJson: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        if (!rawJson || rawJson.length <= 1) {
+          alert('File Excel kosong atau hanya berisi baris header.');
+          return;
+        }
+
+        const parsed: Teacher[] = [];
+        // Skip row 0 (headers)
+        for (let i = 1; i < rawJson.length; i++) {
+          const row = rawJson[i];
+          if (!row || !row[0] || !row[2]) continue;
+
+          const name = String(row[0]).trim();
+          const nip = row[1] ? String(row[1]).trim() : '-';
+          const subject = String(row[2]).trim();
+          const role = row[3] ? String(row[3]).trim() : 'Guru Mata Pelajaran';
+          const catRaw = row[4] ? String(row[4]).toLowerCase().trim() : 'guru';
+          const category: Teacher['category'] =
+            catRaw.includes('pimpinan')
+              ? 'pimpinan'
+              : catRaw.includes('bk') || catRaw.includes('konseling')
+              ? 'bk'
+              : catRaw.includes('tendik') || catRaw.includes('tu') || catRaw.includes('pustaka')
+              ? 'tendik'
+              : 'guru';
+          const education = row[5] ? String(row[5]).trim() : 'S1 Pendidikan';
+          const bio = row[6] ? String(row[6]).trim() : 'Mendidik dengan penuh dedikasi di SMPN 14 Tubaba.';
+
+          const initials = name
+            .split(' ')
+            .map((w) => w[0])
+            .slice(0, 2)
+            .join('')
+            .toUpperCase();
+
+          parsed.push({
+            id: 'teacher-' + (Date.now() + i),
+            name,
+            nip,
+            role,
+            subject,
+            category,
+            education,
+            initials,
+            bio,
+            colorScheme: 'from-blue-700 to-indigo-900'
+          });
+        }
+
+        if (parsed.length === 0) {
+          alert('Tidak ada data guru yang valid ditemukan dalam sheet Excel.');
+          return;
+        }
+
+        setTeacherImportStatus({
+          total: parsed.length,
+          preview: parsed
+        });
+      } catch (err) {
+        alert('Gagal membaca file Excel. Pastikan format file adalah .xlsx atau .xls.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleApplyTeacherImport = () => {
+    if (!teacherImportStatus || teacherImportStatus.preview.length === 0) return;
+    importTeachers(teacherImportStatus.preview);
+    showSuccess(`Berhasil mengimpor ${teacherImportStatus.preview.length} data guru ke sistem!`);
+    setTeacherImportStatus(null);
+    if (teacherFileInputRef.current) {
+      teacherFileInputRef.current.value = '';
+    }
+  };
+
+  // 3. Student Add & Excel Template/Import (.xlsx ONLY)
+  const handleAddStudent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStudent.fullName || !newStudent.nisn) {
+      alert('Nama lengkap dan NISN wajib diisi.');
+      return;
+    }
+
+    const studentToAdd: Student = {
+      id: 'std-' + Date.now(),
+      nisn: newStudent.nisn.trim(),
+      nis: newStudent.nis.trim() || '2414' + Math.floor(10 + Math.random() * 90),
+      fullName: newStudent.fullName.trim(),
+      gender: newStudent.gender,
+      grade: newStudent.grade,
+      rombel: newStudent.rombel || `${newStudent.grade}-A`,
+      birthPlace: newStudent.birthPlace || 'Tulang Bawang Barat',
+      birthDate: newStudent.birthDate || '2013-01-01',
+      address: newStudent.address || 'Kab. Tulang Bawang Barat',
+      parentName: newStudent.parentName || '-',
+      parentPhone: newStudent.parentPhone || '-',
+      status: 'Aktif'
+    };
+
+    addStudent(studentToAdd);
+    setNewStudent({
+      nisn: '',
+      nis: '',
+      fullName: '',
+      gender: 'Laki-laki',
+      grade: 'VII',
+      rombel: 'VII-A',
+      birthPlace: 'Tulang Bawang Barat',
+      birthDate: '2013-05-14',
+      address: '',
+      parentName: '',
+      parentPhone: ''
+    });
+    showSuccess(`Peserta didik ${studentToAdd.fullName} berhasil ditambahkan!`);
+  };
+
+  // Student Excel Template Download (.xlsx ONLY)
+  const handleDownloadStudentTemplate = () => {
+    const headers = [
+      'NISN',
+      'NIS',
+      'NAMA_LENGKAP',
+      'JENIS_KELAMIN',
+      'TINGKAT',
+      'ROMBEL',
+      'TEMPAT_LAHIR',
+      'TANGGAL_LAHIR',
+      'ALAMAT',
+      'NAMA_ORANG_TUA',
+      'NO_HP_ORTU'
+    ];
+
+    const sampleRows = [
+      [
+        '0129384725',
+        '241411',
+        'Ahmad Farhan Maulana',
+        'Laki-laki',
+        'VII',
+        'VII-A',
+        'Tulang Bawang Barat',
+        '2013-06-12',
+        'Tiyuh Panaragan RT 02/RW 01',
+        'Maulana Yusuf',
+        '081277889900'
+      ],
+      [
+        '0128472918',
+        '241412',
+        'Zaskia Amelia Putri',
+        'Perempuan',
+        'VII',
+        'VII-B',
+        'Daya Murni',
+        '2013-09-20',
+        'Tiyuh Daya Murni Blok C',
+        'Suparman',
+        '085266778899'
+      ],
+      [
+        '0117462999',
+        '231415',
+        'Bayu Wicaksono',
+        'Laki-laki',
+        'VIII',
+        'VIII-A',
+        'Menggala',
+        '2012-03-15',
+        'Kagungan Ratu RT 01',
+        'Bambang S',
+        '082211223344'
+      ]
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+    ws['!cols'] = [
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 26 },
+      { wch: 14 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 22 },
+      { wch: 14 },
+      { wch: 32 },
+      { wch: 22 },
+      { wch: 16 }
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Peserta Didik');
+    XLSX.writeFile(wb, 'Template_Data_Peserta_Didik_SMPN14_Tubaba.xlsx');
+    showSuccess('Template Excel Peserta Didik (.xlsx) berhasil diunduh!');
+  };
+
+  // Student Excel Upload (.xlsx / .xls)
+  const handleStudentExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rawJson: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        if (!rawJson || rawJson.length <= 1) {
+          alert('File Excel kosong atau hanya berisi baris judul header.');
+          return;
+        }
+
+        const parsed: Student[] = [];
+        for (let i = 1; i < rawJson.length; i++) {
+          const row = rawJson[i];
+          if (!row || !row[0] || !row[2]) continue;
+
+          const nisn = String(row[0]).trim();
+          const nis = row[1] ? String(row[1]).trim() : '2414' + Math.floor(10 + Math.random() * 90);
+          const fullName = String(row[2]).trim();
+
+          const genderRaw = row[3] ? String(row[3]).trim().toLowerCase() : 'laki-laki';
+          const gender: 'Laki-laki' | 'Perempuan' =
+            genderRaw.startsWith('p') || genderRaw.includes('perempuan') ? 'Perempuan' : 'Laki-laki';
+
+          const gradeRaw = row[4] ? String(row[4]).trim().toUpperCase() : 'VII';
+          const grade: 'VII' | 'VIII' | 'IX' =
+            gradeRaw.includes('9') || gradeRaw.includes('IX')
+              ? 'IX'
+              : gradeRaw.includes('8') || gradeRaw.includes('VIII')
+              ? 'VIII'
+              : 'VII';
+
+          const rombel = row[5] ? String(row[5]).trim() : `${grade}-A`;
+          const birthPlace = row[6] ? String(row[6]).trim() : 'Tulang Bawang Barat';
+          const birthDate = row[7] ? String(row[7]).trim() : '2013-01-01';
+          const address = row[8] ? String(row[8]).trim() : 'Kab. Tulang Bawang Barat';
+          const parentName = row[9] ? String(row[9]).trim() : '-';
+          const parentPhone = row[10] ? String(row[10]).trim() : '-';
+
+          parsed.push({
+            id: 'std-' + (Date.now() + i),
+            nisn,
+            nis,
+            fullName,
+            gender,
+            grade,
+            rombel,
+            birthPlace,
+            birthDate,
+            address,
+            parentName,
+            parentPhone,
+            status: 'Aktif'
+          });
+        }
+
+        if (parsed.length === 0) {
+          alert('Tidak ada data peserta didik yang valid ditemukan dalam file Excel.');
+          return;
+        }
+
+        setStudentImportStatus({
+          total: parsed.length,
+          preview: parsed
+        });
+      } catch (err) {
+        alert('Gagal membaca file Excel. Pastikan format file adalah .xlsx atau .xls.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleApplyStudentImport = () => {
+    if (!studentImportStatus || studentImportStatus.preview.length === 0) return;
+    importStudents(studentImportStatus.preview);
+    showSuccess(`Berhasil mengimpor ${studentImportStatus.preview.length} data peserta didik!`);
+    setStudentImportStatus(null);
+    if (studentFileInputRef.current) {
+      studentFileInputRef.current.value = '';
+    }
+  };
+
+  // 4. Announcement Add & Document Upload
+  const handleAnnouncementFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ukuran lampiran maksimal 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setNewAnnouncement((prev) => ({
+        ...prev,
+        documentName: file.name,
+        documentUrl: base64
+      }));
+      showSuccess(`Berkas ${file.name} berhasil diunggah sebagai lampiran!`);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAddAnnouncement = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAnnouncement.title || !newAnnouncement.content) return;
+
+    const annToAdd: Announcement = {
+      id: 'ann-' + Date.now(),
+      title: newAnnouncement.title,
+      category: newAnnouncement.category,
+      date: new Date().toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      }),
+      dateIso: new Date().toISOString().split('T')[0],
+      summary: newAnnouncement.summary || newAnnouncement.title,
+      content: newAnnouncement.content,
+      documentName: newAnnouncement.documentName || 'Surat_Edaran_2026.pdf',
+      documentUrl: newAnnouncement.documentUrl || undefined,
+      important: false
+    };
+
+    addAnnouncement(annToAdd);
+    setNewAnnouncement({
+      title: '',
+      category: 'Akademik',
+      summary: '',
+      content: '',
+      documentName: 'Surat_Edaran_2026.pdf',
+      documentUrl: ''
+    });
+    if (announcementFileInputRef.current) {
+      announcementFileInputRef.current.value = '';
+    }
+    showSuccess('Pengumuman resmi beserta lampiran berhasil dipublikasikan!');
+  };
+
+  // 5. Activity Add & Photo Upload
+  const handleActivityImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Mohon pilih file foto gambar (JPG, PNG, WebP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ukuran foto maksimal 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setNewActivity((prev) => ({
+        ...prev,
+        image: base64
+      }));
+      showSuccess(`Foto ${file.name} berhasil diunggah untuk kegiatan!`);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAddActivity = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newActivity.title) return;
+
+    const actToAdd: ActivityPhoto = {
+      id: 'act-' + Date.now(),
+      title: newActivity.title,
+      category: newActivity.category,
+      categoryLabel: newActivity.categoryLabel,
+      date: new Date().toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      }),
+      location: newActivity.location,
+      image: newActivity.image || '/src/assets/images/activity_ceremony_1792594019651.jpg',
+      caption: newActivity.caption || newActivity.title
+    };
+
+    addActivity(actToAdd);
+    setNewActivity({
+      title: '',
+      category: 'akademik',
+      categoryLabel: 'Sains & Lab',
+      location: 'Kampus SMPN 14 Tubaba',
+      caption: '',
+      image: ''
+    });
+    if (activityImageInputRef.current) {
+      activityImageInputRef.current.value = '';
+    }
+    showSuccess('Dokumentasi foto kegiatan baru berhasil ditambahkan ke galeri!');
+  };
+
+  // Filtered students inside admin table
+  const filteredAdminStudents = students.filter((s) => {
+    const matchSearch =
+      s.fullName.toLowerCase().includes(studentSearch.toLowerCase()) ||
+      s.nisn.includes(studentSearch) ||
+      s.rombel.toLowerCase().includes(studentSearch.toLowerCase());
+    const matchGrade = studentGradeFilter === 'all' || s.grade === studentGradeFilter;
+    return matchSearch && matchGrade;
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden">
+      <div className="bg-white rounded-2xl w-full max-w-6xl h-[94vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        {/* Top Header */}
+        <div className="p-4 sm:p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-blue-800 text-amber-400">
+              <Settings className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold leading-tight flex items-center gap-2">
+                <span>Panel Pengelola Data Sekolah</span>
+                <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-blue-950 text-amber-300 border border-blue-800 font-mono">
+                  SMPN 14 TUBABA
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400">
+                Sesi Administrator: <span className="text-amber-400 font-mono">imamarifin55@admin.smp.belajar.id</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (confirm('Kembalikan seluruh data ke pengaturan awal (default)?')) {
+                  resetToDefault();
+                  showSuccess('Data telah dikembalikan ke pengaturan default.');
+                }
+              }}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              title="Reset ke data bawaan"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+              <span>Reset Default</span>
+            </button>
+            <button
+              onClick={() => setIsAdminOpen(false)}
+              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              aria-label="Tutup panel"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        {/* Sidebar + Main Content Layout */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Vertical Navigation Sidebar */}
+          <aside className="w-56 sm:w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0 p-3 sm:p-4 text-slate-300">
+            <div className="space-y-1">
+              <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Menu Pengelola
+              </div>
+
+              <button
+                onClick={() => setActiveTab('profil')}
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
+                  activeTab === 'profil'
+                    ? 'bg-blue-900 text-white shadow-xs font-bold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <School className="w-4 h-4 shrink-0" />
+                <span className="truncate">Profil Sekolah &amp; Logo</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('guru')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
+                  activeTab === 'guru'
+                    ? 'bg-blue-900 text-white shadow-xs font-bold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <GraduationCap className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Dewan Guru</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
+                  {teachers.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('peserta-didik')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
+                  activeTab === 'peserta-didik'
+                    ? 'bg-blue-900 text-white shadow-xs font-bold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <Users className="w-4 h-4 shrink-0 text-amber-400" />
+                  <span className="truncate font-semibold">Peserta Didik</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-400/20 text-amber-300 font-mono font-bold">
+                  {students.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('pengumuman')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
+                  activeTab === 'pengumuman'
+                    ? 'bg-blue-900 text-white shadow-xs font-bold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <Bell className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Pengumuman &amp; Lampiran</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
+                  {announcements.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('galeri')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
+                  activeTab === 'galeri'
+                    ? 'bg-blue-900 text-white shadow-xs font-bold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <Camera className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Galeri Foto</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
+                  {activities.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('ppdb')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
+                  activeTab === 'ppdb'
+                    ? 'bg-blue-900 text-white shadow-xs font-bold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <UserCheck className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Verifikasi PPDB</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
+                  {applicants.length}
+                </span>
+              </button>
+            </div>
+
+            {/* Sidebar Footer info */}
+            <div className="pt-4 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
+              <div className="flex items-center gap-1.5 text-amber-400 font-semibold">
+                <FileSpreadsheet className="w-4 h-4 shrink-0" />
+                <span>Format Excel (.xlsx) Murni</span>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Template &amp; impor guru dan siswa menggunakan format resmi Excel (.xlsx).
+              </p>
+            </div>
+          </aside>
+
+          {/* Right Main Content Body */}
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50/50">
+            {/* TAB: PROFIL SEKOLAH & UNGGAH LOGO */}
+            {activeTab === 'profil' && (
+              <form onSubmit={handleSaveProfile} className="max-w-3xl space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-slate-200 pb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Pengaturan Identitas &amp; Logo Sekolah</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Unggah logo resmi sekolah dan perbarui data umum yang tampil di website.
+                  </p>
+                </div>
+
+                {/* Fitur Unggah Logo Sekolah */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" />
+                    <span>Logo Resmi SMPN 14 Tulang Bawang Barat</span>
+                  </h4>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-6">
+                    {/* Logo Preview Container */}
+                    <div className="w-24 h-24 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden shrink-0 shadow-inner p-2 relative group">
+                      {profileForm.logoUrl ? (
+                        <img
+                          src={profileForm.logoUrl}
+                          alt="Logo Sekolah"
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="text-center text-slate-400">
+                          <School className="w-8 h-8 mx-auto mb-1 opacity-50" />
+                          <span className="text-[10px] block">Belum ada logo</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Logo Upload Actions */}
+                    <div className="space-y-2 flex-1 text-center sm:text-left">
+                      <p className="text-xs font-semibold text-slate-800">
+                        Pilih file logo sekolah (Format: PNG, JPG, WebP, SVG)
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        Disarankan logo berlatar transparan (PNG) dengan resolusi minimal 200x200 piksel, maksimal 2MB. 
+                        Logo ini otomatis muncul di navigasi header dan footer sekolah.
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <label
+                          htmlFor="school-logo-input"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Pilih Foto Logo</span>
+                        </label>
+                        <input
+                          ref={logoInputRef}
+                          type="file"
+                          id="school-logo-input"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          className="hidden"
+                        />
+
+                        {profileForm.logoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProfileForm((prev) => ({ ...prev, logoUrl: '' }));
+                              if (logoInputRef.current) logoInputRef.current.value = '';
+                              showSuccess('Logo dihapus. Kembali ke lambang standar.');
+                            }}
+                            className="px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                          >
+                            Hapus Logo
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Form Data Sekolah */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div className="sm:col-span-2">
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Nama Resmi Sekolah
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={profileForm.name}
+                      onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Nama Kepala Sekolah &amp; Gelar
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={profileForm.headmaster}
+                      onChange={(e) => setProfileForm({ ...profileForm, headmaster: e.target.value })}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      NPSN (Nomor Pokok Sekolah Nasional)
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={profileForm.npsn}
+                      onChange={(e) => setProfileForm({ ...profileForm, npsn: e.target.value })}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Status Akreditasi
+                    </label>
+                    <input
+                      type="text"
+                      value={profileForm.accreditation}
+                      onChange={(e) => setProfileForm({ ...profileForm, accreditation: e.target.value })}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Jam Operasional Sekolah
+                    </label>
+                    <input
+                      type="text"
+                      value={profileForm.workingHours}
+                      onChange={(e) => setProfileForm({ ...profileForm, workingHours: e.target.value })}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Nomor WhatsApp Humas / PPDB
+                    </label>
+                    <input
+                      type="text"
+                      value={profileForm.whatsapp}
+                      onChange={(e) => setProfileForm({ ...profileForm, whatsapp: e.target.value })}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Email Resmi
+                    </label>
+                    <input
+                      type="email"
+                      value={profileForm.email}
+                      onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Alamat Lengkap Sekolah (Kecamatan &amp; Kabupaten)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={profileForm.address}
+                      onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-3 flex justify-end">
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4 text-amber-300" />
+                    <span>Simpan Perubahan Profil &amp; Logo</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* TAB: DEWAN GURU (DENGAN TEMPLATE EXCEL & IMPOR EXCEL .XLSX) */}
+            {activeTab === 'guru' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-slate-200 pb-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                      <span>Kelola &amp; Impor Data Dewan Guru</span>
+                      <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-900">
+                        {teachers.length} Guru
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Fasilitas impor file Excel (.xlsx) murni dan input manual dewan guru aktif.
+                    </p>
+                  </div>
+
+                  {/* Excel Action Buttons for Teachers */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleDownloadTeacherTemplate}
+                      className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200/80 rounded-xl transition-colors cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-blue-900" />
+                      <span>Unduh Template Excel Guru (.xlsx)</span>
+                    </button>
+
+                    <label
+                      htmlFor="teacher-excel-importer"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-900 hover:bg-blue-800 rounded-xl shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Upload className="w-4 h-4 text-amber-300" />
+                      <span>Pilih File Excel Guru</span>
+                    </label>
+                    <input
+                      ref={teacherFileInputRef}
+                      type="file"
+                      id="teacher-excel-importer"
+                      accept=".xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                      onChange={handleTeacherExcelUpload}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+
+                {/* Teacher Excel Import Preview Banner */}
+                {teacherImportStatus && (
+                  <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 shadow-sm space-y-4 animate-in fade-in zoom-in-95">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-amber-400 text-slate-950 font-bold">
+                          <FileSpreadsheet className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-sm">
+                            File Excel Guru Terbaca: {teacherImportStatus.total} Data Guru Siap Diimpor
+                          </h4>
+                          <p className="text-xs text-slate-600 mt-0.5">
+                            Data akan diselaraskan berdasarkan NIP atau nama guru.
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setTeacherImportStatus(null)}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-amber-100/60"
+                        title="Batal impor"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="max-h-52 overflow-y-auto border border-amber-200 rounded-xl bg-white text-xs">
+                      <table className="w-full text-left">
+                        <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                          <tr>
+                            <th className="py-2 px-3">Nama Lengkap</th>
+                            <th className="py-2 px-3 font-mono">NIP</th>
+                            <th className="py-2 px-3">Mata Pelajaran</th>
+                            <th className="py-2 px-3">Jabatan</th>
+                            <th className="py-2 px-3">Kategori</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {teacherImportStatus.preview.slice(0, 10).map((t, i) => (
+                            <tr key={i} className="hover:bg-amber-50/40">
+                              <td className="py-1.5 px-3 font-semibold text-slate-900">{t.name}</td>
+                              <td className="py-1.5 px-3 font-mono text-slate-600">{t.nip}</td>
+                              <td className="py-1.5 px-3">{t.subject}</td>
+                              <td className="py-1.5 px-3 text-slate-700">{t.role}</td>
+                              <td className="py-1.5 px-3 uppercase text-[10px] font-bold text-blue-900">{t.category}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-xs text-slate-500">
+                        {teacherImportStatus.total > 10 ? `Menampilkan 10 dari total ${teacherImportStatus.total} guru.` : `Semua ${teacherImportStatus.total} data ditampilkan.`}
+                      </span>
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setTeacherImportStatus(null)}
+                          className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-xl cursor-pointer"
+                        >
+                          Batal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleApplyTeacherImport}
+                          className="px-5 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Check className="w-4 h-4" />
+                          <span>Terapkan Impor Guru ({teacherImportStatus.total})</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Add form */}
+                <form onSubmit={handleAddTeacher} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                  <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    <span>Tambah Guru / Tenaga Kependidikan Manual</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Nama Lengkap &amp; Gelar *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: Budi Santoso, S.Pd."
+                        value={newTeacher.name}
+                        onChange={(e) => setNewTeacher({ ...newTeacher, name: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">NIP (Opsional)</label>
+                      <input
+                        type="text"
+                        placeholder="1985..."
+                        value={newTeacher.nip}
+                        onChange={(e) => setNewTeacher({ ...newTeacher, nip: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Mata Pelajaran Diampu *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: Bahasa Inggris"
+                        value={newTeacher.subject}
+                        onChange={(e) => setNewTeacher({ ...newTeacher, subject: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Jabatan / Peran</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: Guru Mata Pelajaran / Wali Kelas"
+                        value={newTeacher.role}
+                        onChange={(e) => setNewTeacher({ ...newTeacher, role: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Kategori</label>
+                      <select
+                        value={newTeacher.category}
+                        onChange={(e) =>
+                          setNewTeacher({ ...newTeacher, category: e.target.value as Teacher['category'] })
+                        }
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      >
+                        <option value="guru">Guru Mata Pelajaran</option>
+                        <option value="pimpinan">Pimpinan Sekolah</option>
+                        <option value="bk">Bimbingan Konseling (BK)</option>
+                        <option value="tendik">Tata Usaha &amp; Perpustakaan</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Pendidikan Terakhir</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: S1 Pendidikan Fisika (UNILA)"
+                        value={newTeacher.education}
+                        onChange={(e) => setNewTeacher({ ...newTeacher, education: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-blue-900 text-white font-semibold text-xs rounded-xl hover:bg-blue-800 transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Plus className="w-4 h-4 text-amber-300" />
+                      <span>Tambahkan ke Direktori Guru</span>
+                    </button>
+                  </div>
+                </form>
+
+                {/* Existing Teachers List */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Daftar Guru Terdaftar ({teachers.length} Orang)
+                  </h4>
+                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white text-xs shadow-xs">
+                    {teachers.map((teacher) => (
+                      <div key={teacher.id} className="p-3.5 flex items-center justify-between gap-4 hover:bg-slate-50">
+                        <div>
+                          <div className="font-bold text-slate-900">{teacher.name}</div>
+                          <div className="text-slate-500 font-mono text-[11px]">NIP. {teacher.nip} · {teacher.subject}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
+                            {teacher.role}
+                          </span>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Hapus ${teacher.name} dari daftar guru?`)) {
+                                deleteTeacher(teacher.id);
+                                showSuccess('Guru berhasil dihapus.');
+                              }
+                            }}
+                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                            title="Hapus data guru"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: PESERTA DIDIK (TEMPLATE EXCEL & IMPOR EXCEL .XLSX) */}
+            {activeTab === 'peserta-didik' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                {/* Header Section */}
+                <div className="border-b border-slate-200 pb-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                      <span>Kelola &amp; Impor Data Peserta Didik</span>
+                      <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-900">
+                        {students.length} Siswa
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Fasilitas impor file Excel (.xlsx) murni dan input mandiri data siswa aktif.
+                    </p>
+                  </div>
+
+                  {/* Top Action Buttons - Excel Only */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleDownloadStudentTemplate}
+                      className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200/80 rounded-xl transition-colors cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-blue-900" />
+                      <span>Unduh Template Excel Siswa (.xlsx)</span>
+                    </button>
+
+                    <label
+                      htmlFor="student-excel-importer"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-900 hover:bg-blue-800 rounded-xl shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Upload className="w-4 h-4 text-amber-300" />
+                      <span>Pilih File Excel Siswa</span>
+                    </label>
+                    <input
+                      ref={studentFileInputRef}
+                      type="file"
+                      id="student-excel-importer"
+                      accept=".xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                      onChange={handleStudentExcelUpload}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+
+                {/* Import Preview Banner if file loaded */}
+                {studentImportStatus && (
+                  <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 shadow-sm space-y-4 animate-in fade-in zoom-in-95">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-amber-400 text-slate-950 font-bold">
+                          <FileSpreadsheet className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-sm">
+                            File Excel Siswa Terbaca: {studentImportStatus.total} Data Siswa Siap Diimpor
+                          </h4>
+                          <p className="text-xs text-slate-600 mt-0.5">
+                            Data akan otomatis diselaraskan berdasarkan nomor NISN yang unik.
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setStudentImportStatus(null)}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-amber-100/60"
+                        title="Batal impor"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="max-h-52 overflow-y-auto border border-amber-200 rounded-xl bg-white text-xs">
+                      <table className="w-full text-left">
+                        <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                          <tr>
+                            <th className="py-2 px-3 font-mono">NISN</th>
+                            <th className="py-2 px-3">Nama Lengkap</th>
+                            <th className="py-2 px-3">L/P</th>
+                            <th className="py-2 px-3">Rombel</th>
+                            <th className="py-2 px-3">Orang Tua</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {studentImportStatus.preview.slice(0, 10).map((st, i) => (
+                            <tr key={i} className="hover:bg-amber-50/40">
+                              <td className="py-1.5 px-3 font-mono font-medium text-blue-900">{st.nisn}</td>
+                              <td className="py-1.5 px-3 font-semibold text-slate-900">{st.fullName}</td>
+                              <td className="py-1.5 px-3">{st.gender}</td>
+                              <td className="py-1.5 px-3 font-mono">{st.rombel}</td>
+                              <td className="py-1.5 px-3 text-slate-600">{st.parentName}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-xs text-slate-500">
+                        {studentImportStatus.total > 10 ? `Menampilkan 10 dari total ${studentImportStatus.total} data baris.` : `Semua ${studentImportStatus.total} baris ditampilkan.`}
+                      </span>
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setStudentImportStatus(null)}
+                          className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-xl cursor-pointer"
+                        >
+                          Batal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleApplyStudentImport}
+                          className="px-5 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Check className="w-4 h-4" />
+                          <span>Terapkan Impor Data ({studentImportStatus.total})</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Form Input Manual Siswa */}
+                <form
+                  onSubmit={handleAddStudent}
+                  className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4"
+                >
+                  <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    <span>Input Manual Data Siswa Baru</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="sm:col-span-2">
+                      <label className="font-semibold text-slate-700 block mb-1">
+                        Nama Lengkap Siswa *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: Muhammad Farhan"
+                        value={newStudent.fullName}
+                        onChange={(e) => setNewStudent({ ...newStudent, fullName: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">NISN (10 Digit) *</label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={10}
+                        placeholder="Contoh: 0129384725"
+                        value={newStudent.nisn}
+                        onChange={(e) => setNewStudent({ ...newStudent, nisn: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">NIS Sekolah</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: 241415"
+                        value={newStudent.nis}
+                        onChange={(e) => setNewStudent({ ...newStudent, nis: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Jenis Kelamin</label>
+                      <select
+                        value={newStudent.gender}
+                        onChange={(e) =>
+                          setNewStudent({ ...newStudent, gender: e.target.value as 'Laki-laki' | 'Perempuan' })
+                        }
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      >
+                        <option value="Laki-laki">Laki-laki</option>
+                        <option value="Perempuan">Perempuan</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Tingkat Kelas</label>
+                      <select
+                        value={newStudent.grade}
+                        onChange={(e) => {
+                          const gr = e.target.value as 'VII' | 'VIII' | 'IX';
+                          setNewStudent({ ...newStudent, grade: gr, rombel: `${gr}-A` });
+                        }}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      >
+                        <option value="VII">Kelas VII (Tujuh)</option>
+                        <option value="VIII">Kelas VIII (Delapan)</option>
+                        <option value="IX">Kelas IX (Sembilan)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Rombel / Kelas</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: VII-A, VIII-B"
+                        value={newStudent.rombel}
+                        onChange={(e) => setNewStudent({ ...newStudent, rombel: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Nama Orang Tua</label>
+                      <input
+                        type="text"
+                        placeholder="Nama Ayah/Ibu"
+                        value={newStudent.parentName}
+                        onChange={(e) => setNewStudent({ ...newStudent, parentName: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="font-semibold text-slate-700 block mb-1">Alamat Domisili</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: Tiyuh Panaragan Jaya RT 02"
+                        value={newStudent.address}
+                        onChange={(e) => setNewStudent({ ...newStudent, address: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">No HP / WA Ortu</label>
+                      <input
+                        type="text"
+                        placeholder="0812..."
+                        value={newStudent.parentPhone}
+                        onChange={(e) => setNewStudent({ ...newStudent, parentPhone: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div className="flex items-end">
+                      <button
+                        type="submit"
+                        className="w-full py-2.5 bg-blue-900 text-white font-semibold text-xs rounded-xl hover:bg-blue-800 transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                      >
+                        <Plus className="w-4 h-4 text-amber-300" />
+                        <span>Simpan Siswa</span>
+                      </button>
+                    </div>
+                  </div>
+                </form>
+
+                {/* Table List inside Admin */}
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-700">Filter Tingkat:</span>
+                      {(['all', 'VII', 'VIII', 'IX'] as const).map((g) => (
+                        <button
+                          key={g}
+                          onClick={() => setStudentGradeFilter(g)}
+                          className={`px-2.5 py-1 text-xs rounded-md font-semibold transition-colors cursor-pointer ${
+                            studentGradeFilter === g
+                              ? 'bg-blue-900 text-white'
+                              : 'text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          {g === 'all' ? 'Semua' : `Kelas ${g}`}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="relative min-w-[240px]">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={studentSearch}
+                        onChange={(e) => setStudentSearch(e.target.value)}
+                        placeholder="Cari siswa atau NISN..."
+                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border border-slate-200 rounded-xl overflow-hidden bg-white text-xs shadow-xs">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 text-[11px]">
+                          <tr>
+                            <th className="py-2.5 px-3 font-mono">NISN</th>
+                            <th className="py-2.5 px-3">Nama Siswa</th>
+                            <th className="py-2.5 px-3">L/P</th>
+                            <th className="py-2.5 px-3 font-mono">Rombel</th>
+                            <th className="py-2.5 px-3">Alamat</th>
+                            <th className="py-2.5 px-3">Orang Tua</th>
+                            <th className="py-2.5 px-3 text-right">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {filteredAdminStudents.map((st) => (
+                            <tr key={st.id} className="hover:bg-slate-50">
+                              <td className="py-2 px-3 font-mono font-medium text-blue-900">{st.nisn}</td>
+                              <td className="py-2 px-3 font-bold text-slate-900">{st.fullName}</td>
+                              <td className="py-2 px-3">{st.gender === 'Laki-laki' ? 'L' : 'P'}</td>
+                              <td className="py-2 px-3 font-mono font-semibold">{st.rombel}</td>
+                              <td className="py-2 px-3 text-slate-600 truncate max-w-xs">{st.address}</td>
+                              <td className="py-2 px-3 text-slate-600">{st.parentName}</td>
+                              <td className="py-2 px-3 text-right">
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`Hapus data peserta didik ${st.fullName}?`)) {
+                                      deleteStudent(st.id);
+                                      showSuccess('Data siswa telah dihapus.');
+                                    }
+                                  }}
+                                  className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                                  title="Hapus siswa"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: PENGUMUMAN (DENGAN FITUR UPLOAD LAMPIRAN BERKAS/PDF) */}
+            {activeTab === 'pengumuman' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-slate-200 pb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Kelola Pengumuman &amp; Unggah Lampiran</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Terbitkan surat edaran baru beserta unggah berkas PDF / dokumen resmi sekolah.
+                  </p>
+                </div>
+
+                <form onSubmit={handleAddAnnouncement} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                  <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    <span>Publikasikan Pengumuman / Edaran Baru</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="sm:col-span-2">
+                      <label className="font-semibold text-slate-700 block mb-1">Judul Pengumuman *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: Jadwal Pelaksanaan Asesmen Nasional Berbasis Komputer (ANBK)"
+                        value={newAnnouncement.title}
+                        onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Kategori</label>
+                      <select
+                        value={newAnnouncement.category}
+                        onChange={(e) =>
+                          setNewAnnouncement({
+                            ...newAnnouncement,
+                            category: e.target.value as Announcement['category']
+                          })
+                        }
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      >
+                        <option value="Akademik">Akademik</option>
+                        <option value="PPDB">PPDB</option>
+                        <option value="Kesiswaan">Kesiswaan</option>
+                        <option value="Edaran">Surat Edaran</option>
+                      </select>
+                    </div>
+
+                    {/* Fitur Upload File Dokumen Pengumuman */}
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">
+                        Unggah Berkas Lampiran (PDF / Dokumen)
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <label
+                          htmlFor="ann-file-upload"
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg border border-slate-200 cursor-pointer transition-colors"
+                        >
+                          <Paperclip className="w-3.5 h-3.5 text-blue-900" />
+                          <span className="truncate">
+                            {newAnnouncement.documentUrl ? newAnnouncement.documentName : 'Pilih Berkas Lampiran'}
+                          </span>
+                        </label>
+                        <input
+                          ref={announcementFileInputRef}
+                          type="file"
+                          id="ann-file-upload"
+                          accept=".pdf,.doc,.docx,.jpg,.png"
+                          onChange={handleAnnouncementFileUpload}
+                          className="hidden"
+                        />
+                        {newAnnouncement.documentUrl && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewAnnouncement((prev) => ({ ...prev, documentUrl: '', documentName: 'Surat_Edaran_2026.pdf' }));
+                              if (announcementFileInputRef.current) announcementFileInputRef.current.value = '';
+                            }}
+                            className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg"
+                            title="Hapus berkas"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-500 mt-1 block">
+                        File maksimal 5MB. Siswa dan wali dapat langsung mengunduhnya di website.
+                      </span>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="font-semibold text-slate-700 block mb-1">Isi Lengkap Surat Pengumuman *</label>
+                      <textarea
+                        rows={3}
+                        required
+                        placeholder="Tuliskan isi pengumuman secara mendetail..."
+                        value={newAnnouncement.content}
+                        onChange={(e) => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-blue-900 text-white font-semibold text-xs rounded-xl hover:bg-blue-800 transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Plus className="w-4 h-4 text-amber-300" />
+                      <span>Terbitkan Pengumuman</span>
+                    </button>
+                  </div>
+                </form>
+
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Daftar Pengumuman Aktif ({announcements.length})
+                  </h4>
+                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white text-xs shadow-xs">
+                    {announcements.map((ann) => (
+                      <div key={ann.id} className="p-3.5 flex items-center justify-between gap-4 hover:bg-slate-50">
+                        <div>
+                          <div className="font-bold text-slate-900">{ann.title}</div>
+                          <div className="text-slate-500 text-[11px] flex items-center gap-2 mt-0.5">
+                            <span>{ann.date}</span>
+                            <span aria-hidden="true">·</span>
+                            <span>Kategori: {ann.category}</span>
+                            {ann.documentUrl && (
+                              <>
+                                <span aria-hidden="true">·</span>
+                                <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                                  <Paperclip className="w-3 h-3" />
+                                  <span>Ada Lampiran</span>
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Hapus pengumuman "${ann.title}"?`)) {
+                              deleteAnnouncement(ann.id);
+                              showSuccess('Pengumuman telah dihapus.');
+                            }
+                          }}
+                          className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                          title="Hapus pengumuman"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: GALERI KEGIATAN (DENGAN FITUR UPLOAD FOTO DOKUMENTASI) */}
+            {activeTab === 'galeri' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-slate-200 pb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Kelola Dokumentasi &amp; Unggah Foto Galeri</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Unggah foto dokumentasi kegiatan sekolah langsung dari HP atau komputer Anda.
+                  </p>
+                </div>
+
+                <form onSubmit={handleAddActivity} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                  <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    <span>Tambah Kegiatan Dokumentasi Sekolah</span>
+                  </h4>
+
+                  {/* Upload Foto Preview & Picker */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center gap-4">
+                    <div className="w-32 h-24 rounded-xl bg-slate-200 border border-slate-300 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                      {newActivity.image ? (
+                        <img
+                          src={newActivity.image}
+                          alt="Pratinjau Foto"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-center text-slate-400 p-2">
+                          <Camera className="w-6 h-6 mx-auto mb-1 opacity-60" />
+                          <span className="text-[10px] block leading-tight">Belum ada foto</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-1.5 text-center sm:text-left text-xs">
+                      <span className="font-bold text-slate-800 block">Pilih File Foto Dokumentasi *</span>
+                      <p className="text-[11px] text-slate-500">
+                        Format: JPG, PNG, atau WebP (maksimal 5MB). Foto akan tampil dalam resolusi tajam di galeri beranda.
+                      </p>
+                      <div className="flex items-center gap-2 pt-1 justify-center sm:justify-start">
+                        <label
+                          htmlFor="activity-photo-input"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold rounded-lg shadow-xs cursor-pointer transition-colors"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Unggah Foto dari Perangkat</span>
+                        </label>
+                        <input
+                          ref={activityImageInputRef}
+                          type="file"
+                          id="activity-photo-input"
+                          accept="image/*"
+                          onChange={handleActivityImageUpload}
+                          className="hidden"
+                        />
+                        {newActivity.image && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewActivity((prev) => ({ ...prev, image: '' }));
+                              if (activityImageInputRef.current) activityImageInputRef.current.value = '';
+                            }}
+                            className="px-2.5 py-1.5 text-rose-600 hover:bg-rose-50 rounded-lg text-xs"
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="sm:col-span-2">
+                      <label className="font-semibold text-slate-700 block mb-1">Nama Acara / Kegiatan *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: Lomba Cerdas Cermat Hari Kemerdekaan"
+                        value={newActivity.title}
+                        onChange={(e) => setNewActivity({ ...newActivity, title: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Kategori Kegiatan</label>
+                      <select
+                        value={newActivity.category}
+                        onChange={(e) => {
+                          const cat = e.target.value as ActivityPhoto['category'];
+                          const labels: Record<string, string> = {
+                            upacara: 'Upacara & Nasionalisme',
+                            pramuka: 'Kepramukaan & Karakter',
+                            akademik: 'Sains & Lab',
+                            seni: 'Seni Budaya Lampung',
+                            olahraga: 'Olahraga'
+                          };
+                          setNewActivity({
+                            ...newActivity,
+                            category: cat,
+                            categoryLabel: labels[cat] || 'Kegiatan'
+                          });
+                        }}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      >
+                        <option value="upacara">Upacara &amp; Nasionalisme</option>
+                        <option value="pramuka">Kepramukaan</option>
+                        <option value="akademik">Sains &amp; Lab</option>
+                        <option value="seni">Seni Budaya Lampung</option>
+                        <option value="olahraga">Olahraga</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Lokasi Kegiatan</label>
+                      <input
+                        type="text"
+                        value={newActivity.location}
+                        onChange={(e) => setNewActivity({ ...newActivity, location: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="font-semibold text-slate-700 block mb-1">Keterangan / Narasi Foto</label>
+                      <textarea
+                        rows={2}
+                        placeholder="Deskripsikan keseruan dan tujuan kegiatan..."
+                        value={newActivity.caption}
+                        onChange={(e) => setNewActivity({ ...newActivity, caption: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-blue-900 text-white font-semibold text-xs rounded-xl hover:bg-blue-800 transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Plus className="w-4 h-4 text-amber-300" />
+                      <span>Tambahkan ke Galeri</span>
+                    </button>
+                  </div>
+                </form>
+
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Foto Kegiatan Tampil di Galeri ({activities.length})
+                  </h4>
+                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white text-xs shadow-xs">
+                    {activities.map((act) => (
+                      <div key={act.id} className="p-3.5 flex items-center justify-between gap-4 hover:bg-slate-50">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={act.image}
+                            alt={act.title}
+                            className="w-12 h-10 object-cover rounded-lg border border-slate-200 shrink-0"
+                          />
+                          <div>
+                            <div className="font-bold text-slate-900 line-clamp-1">{act.title}</div>
+                            <div className="text-slate-500 text-[11px]">{act.date} · {act.categoryLabel}</div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Hapus kegiatan "${act.title}"?`)) {
+                              deleteActivity(act.id);
+                              showSuccess('Kegiatan telah dihapus dari galeri.');
+                            }
+                          }}
+                          className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                          title="Hapus foto kegiatan"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: VERIFIKASI PPDB */}
+            {activeTab === 'ppdb' && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="border-b border-slate-200 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">Verifikasi Calon Peserta Didik Baru (PPDB)</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Ubah status verifikasi berkas pendaftar baru secara langsung.
+                    </p>
+                  </div>
+                  <span className="font-bold text-blue-900 text-xs px-2.5 py-1 rounded-lg bg-blue-50">
+                    Total: {applicants.length} Calon Siswa
+                  </span>
+                </div>
+
+                <div className="border border-slate-200 rounded-xl overflow-x-auto bg-white shadow-xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100/80 border-b border-slate-200 text-slate-700 font-bold">
+                      <tr>
+                        <th className="py-3 px-3 font-mono">No. Registrasi</th>
+                        <th className="py-3 px-3">Nama Siswa</th>
+                        <th className="py-3 px-3">Jalur</th>
+                        <th className="py-3 px-3 font-mono">Kontak Ortu</th>
+                        <th className="py-3 px-3">Status Verifikasi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {applicants.map((app) => (
+                        <tr key={app.registrationNumber} className="hover:bg-slate-50">
+                          <td className="py-2.5 px-3 font-mono font-medium text-blue-900">
+                            {app.registrationNumber}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <div className="font-bold text-slate-900">{app.fullName}</div>
+                            <div className="text-[11px] text-slate-500 font-mono">NISN: {app.nisn}</div>
+                          </td>
+                          <td className="py-2.5 px-3">{app.track}</td>
+                          <td className="py-2.5 px-3 font-mono">{app.parentPhone}</td>
+                          <td className="py-2.5 px-3">
+                            <select
+                              value={app.status}
+                              onChange={(e) => {
+                                const newStatus = e.target.value as typeof app.status;
+                                updateApplicantStatus(
+                                  app.registrationNumber,
+                                  newStatus,
+                                  `Status diubah oleh Admin menjadi ${newStatus} pada ${new Date().toLocaleTimeString('id-ID')}`
+                                );
+                                showSuccess(`Status ${app.fullName} diubah ke ${newStatus}`);
+                              }}
+                              className={`p-1.5 rounded-lg text-xs font-semibold border cursor-pointer ${
+                                app.status === 'Lolos Seleksi'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                  : app.status === 'Terverifikasi'
+                                  ? 'bg-blue-50 text-blue-900 border-blue-300'
+                                  : 'bg-amber-50 text-amber-800 border-amber-300'
+                              }`}
+                            >
+                              <option value="Menunggu Berkas">Menunggu Berkas</option>
+                              <option value="Terverifikasi">Terverifikasi</option>
+                              <option value="Lolos Seleksi">Lolos Seleksi</option>
+                              <option value="Cadangan">Cadangan</option>
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </main>
+        </div>
+
+        {/* Floating Toast Notification */}
+        {successToast && (
+          <div className="absolute bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs border border-slate-700 animate-in fade-in slide-in-from-bottom-4 z-50">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{successToast}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
