@@ -117,35 +117,50 @@ export const AnnouncementsSection: React.FC = () => {
             filteredAnnouncements.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
+                className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 group"
               >
-                <div className="space-y-2 max-w-3xl">
-                  {/* Unboxed Metadata Discipline */}
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span className="font-semibold text-blue-900">{item.category}</span>
-                    <span aria-hidden="true">·</span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      {item.date}
-                    </span>
-                    {item.important && (
-                      <>
-                        <span aria-hidden="true">·</span>
-                        <span className="font-semibold text-amber-700">Wajib Diperhatikan</span>
-                      </>
-                    )}
+                <div className="flex flex-col sm:flex-row gap-5 items-start max-w-3xl flex-1">
+                  {item.imageUrl && (
+                    <div
+                      onClick={() => setSelectedAnnouncement(item)}
+                      className="w-full sm:w-44 h-40 sm:h-28 rounded-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200 cursor-pointer relative"
+                    >
+                      <img
+                        src={item.imageUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-2 flex-1">
+                    {/* Metadata Discipline */}
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <span className="font-semibold text-blue-900">{item.category}</span>
+                      <span aria-hidden="true">·</span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        {item.date}
+                      </span>
+                      {item.important && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span className="font-semibold text-amber-700">Wajib Diperhatikan</span>
+                        </>
+                      )}
+                    </div>
+
+                    <h3
+                      onClick={() => setSelectedAnnouncement(item)}
+                      className="text-base sm:text-lg font-bold text-slate-900 hover:text-blue-900 transition-colors cursor-pointer"
+                    >
+                      {item.title}
+                    </h3>
+
+                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-2">
+                      {item.summary}
+                    </p>
                   </div>
-
-                  <h3
-                    onClick={() => setSelectedAnnouncement(item)}
-                    className="text-base sm:text-lg font-bold text-slate-900 hover:text-blue-900 transition-colors cursor-pointer"
-                  >
-                    {item.title}
-                  </h3>
-
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-2">
-                    {item.summary}
-                  </p>
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
@@ -163,7 +178,7 @@ export const AnnouncementsSection: React.FC = () => {
                     onClick={() => setSelectedAnnouncement(item)}
                     className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-900 hover:bg-blue-800 rounded-lg shadow-xs transition-colors cursor-pointer"
                   >
-                    <span>Baca Surat</span>
+                    <span>Baca Selengkapnya</span>
                     <ExternalLink className="w-3.5 h-3.5 text-amber-300" />
                   </button>
                 </div>
@@ -229,9 +244,19 @@ export const AnnouncementsSection: React.FC = () => {
                 </div>
               </div>
 
-              <h3 className="text-xl font-bold text-slate-900 leading-snug mb-4">
+              <h3 className="text-xl font-bold text-slate-900 leading-snug mb-3">
                 {selectedAnnouncement.title}
               </h3>
+
+              {selectedAnnouncement.imageUrl && (
+                <div className="rounded-xl overflow-hidden border border-slate-200 mb-5 max-h-80 bg-slate-100">
+                  <img
+                    src={selectedAnnouncement.imageUrl}
+                    alt={selectedAnnouncement.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
 
               <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line space-y-4">
                 <p>{selectedAnnouncement.content}</p>

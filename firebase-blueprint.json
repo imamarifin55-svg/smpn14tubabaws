@@ -70,6 +70,7 @@
         "dateIso": { "type": "string", "maxLength": 30 },
         "summary": { "type": "string", "maxLength": 500 },
         "content": { "type": "string" },
+        "imageUrl": { "type": "string" },
         "documentName": { "type": "string", "maxLength": 150 },
         "documentUrl": { "type": "string" },
         "important": { "type": "boolean" }

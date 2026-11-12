@@ -89,7 +89,7 @@ export const SchoolProfile: React.FC = () => {
               </blockquote>
 
               <div className="mt-6 pt-6 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
-                <span>Drs. H. Sukamto, M.Pd. — Kepala SMP Negeri 14 Tulang Bawang Barat</span>
+                <span>{schoolInfo.headmaster} — Kepala {schoolInfo.name}</span>
                 <span className="font-mono">Tahun Pelajaran 2026/2027</span>
               </div>
             </div>

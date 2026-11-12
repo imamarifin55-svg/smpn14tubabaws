@@ -15,7 +15,7 @@ export interface Teacher {
 export interface ActivityPhoto {
   id: string;
   title: string;
-  category: 'upacara' | 'pramuka' | 'akademik' | 'seni' | 'olahraga';
+  category: 'upacara' | 'pramuka' | 'akademik' | 'seni' | 'olahraga' | 'osis';
   categoryLabel: string;
   date: string;
   location: string;
@@ -32,6 +32,7 @@ export interface Announcement {
   dateIso: string;
   summary: string;
   content: string;
+  imageUrl?: string; // Optional uploaded news/announcement photo
   documentName?: string;
   documentUrl?: string; // Optional uploaded PDF/image base64 or file URL
   important?: boolean;
@@ -460,6 +461,28 @@ export const SCHOOL_ACTIVITIES: ActivityPhoto[] = [
     image: '/src/assets/images/hero_smpn14_building_1792594018035.jpg',
     caption: 'Edukasi pilah sampah organik dan penanaman 100 bibit tanaman pelindung untuk menjaga kesejukan dan kelestarian ekosistem belajar.',
     highlight: false
+  },
+  {
+    id: 'act-7',
+    title: 'Latihan Dasar Kepemimpinan Siswa (LDKS) Pengurus OSIS 2026/2027',
+    category: 'osis',
+    categoryLabel: 'OSIS & Kepemimpinan',
+    date: '22 Oktober 2026',
+    location: 'Aula Utama & Kampus SMPN 14 Tubaba',
+    image: '/src/assets/images/activity_ceremony_1792594019651.jpg',
+    caption: 'Pembekalan kepemimpinan, manajemen organisasi siswa intra sekolah, dan penanaman integritas karakter Nenemo.',
+    highlight: true
+  },
+  {
+    id: 'act-8',
+    title: 'Pemilihan Umum Ketua dan Wakil Ketua OSIS (Pemilos) Demokratis',
+    category: 'osis',
+    categoryLabel: 'OSIS & Demokrasi Pelajar',
+    date: '10 Oktober 2026',
+    location: 'TPS Demokrasi Pelajar SMPN 14',
+    image: '/src/assets/images/hero_smpn14_building_1792594018035.jpg',
+    caption: 'Pesta demokrasi pelajar menggunakan bilik suara dan e-voting digital untuk melatih kesadaran berbangsa sejak dini.',
+    highlight: false
   }
 ];
 
@@ -472,6 +495,7 @@ export const ANNOUNCEMENTS: Announcement[] = [
     dateIso: '2026-10-28',
     summary: 'Kabar membanggakan datang dari tim robotik dan inovasi sains SMPN 14 Tubaba yang berhasil meraih medali emas pada ajang bergengsi tingkat Provinsi Lampung.',
     content: `Civitas akademika SMP Negeri 14 Tulang Bawang Barat mengucapkan selamat dan apresiasi setinggi-tingginya kepada siswa-siswi pembina klub sains yang berhasil mengharumkan nama sekolah di tingkat Provinsi Lampung. Prestasi ini membuktikan semangat Nenemo (Nemen, Nedes, Nerimo) dan filosofi Ragem Sai Mangi Wawai yang senantiasa ditanamkan dalam keseharian belajar.`,
+    imageUrl: '/src/assets/images/activity_science_lab_1792594020856.jpg',
     documentName: 'Sertifikat_Juara_Sains_2026.pdf',
     important: true
   },

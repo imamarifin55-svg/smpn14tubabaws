@@ -149,13 +149,15 @@ export const AdminPanel: React.FC = () => {
   // Form states for New Announcement (with file upload attachment)
   const [newAnnouncement, setNewAnnouncement] = useState({
     title: '',
-    category: 'Akademik' as Announcement['category'],
+    category: 'Berita' as Announcement['category'],
     summary: '',
     content: '',
+    imageUrl: '',
     documentName: 'Surat_Edaran_2026.pdf',
     documentUrl: ''
   });
   const announcementFileInputRef = useRef<HTMLInputElement>(null);
+  const announcementImageInputRef = useRef<HTMLInputElement>(null);
 
   // Form states for New Activity (with photo image upload)
   const [newActivity, setNewActivity] = useState({
@@ -600,7 +602,33 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
-  // 4. Announcement Add & Document Upload
+  // 4. Announcement Add, Photo Cover Upload & Document Upload
+  const handleAnnouncementImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Mohon pilih file gambar (JPG, PNG, WebP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ukuran foto warta maksimal 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setNewAnnouncement((prev) => ({
+        ...prev,
+        imageUrl: base64
+      }));
+      showSuccess(`Foto berita "${file.name}" berhasil diunggah!`);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleAnnouncementFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -639,6 +667,7 @@ export const AdminPanel: React.FC = () => {
       dateIso: new Date().toISOString().split('T')[0],
       summary: newAnnouncement.summary || newAnnouncement.title,
       content: newAnnouncement.content,
+      imageUrl: newAnnouncement.imageUrl || undefined,
       documentName: newAnnouncement.documentName || 'Surat_Edaran_2026.pdf',
       documentUrl: newAnnouncement.documentUrl || undefined,
       important: false
@@ -647,16 +676,20 @@ export const AdminPanel: React.FC = () => {
     addAnnouncement(annToAdd);
     setNewAnnouncement({
       title: '',
-      category: 'Akademik',
+      category: 'Berita',
       summary: '',
       content: '',
+      imageUrl: '',
       documentName: 'Surat_Edaran_2026.pdf',
       documentUrl: ''
     });
     if (announcementFileInputRef.current) {
       announcementFileInputRef.current.value = '';
     }
-    showSuccess('Pengumuman resmi beserta lampiran berhasil dipublikasikan!');
+    if (announcementImageInputRef.current) {
+      announcementImageInputRef.current.value = '';
+    }
+    showSuccess('Pengumuman / Berita resmi beserta foto dan lampiran berhasil dipublikasikan!');
   };
 
   // 5. Activity Add & Photo Upload
@@ -1772,7 +1805,7 @@ export const AdminPanel: React.FC = () => {
                       </select>
                     </div>
 
-                    {/* Fitur Upload File Dokumen Pengumuman */}
+                    {/* Fitur Upload File Dokumen Lampiran Pengumuman */}
                     <div>
                       <label className="font-semibold text-slate-700 block mb-1">
                         Unggah Berkas Lampiran (PDF / Dokumen)
@@ -1810,16 +1843,85 @@ export const AdminPanel: React.FC = () => {
                         )}
                       </div>
                       <span className="text-[10px] text-slate-500 mt-1 block">
-                        File maksimal 5MB. Siswa dan wali dapat langsung mengunduhnya di website.
+                        File maksimal 5MB (PDF/Doc). Siswa dan wali dapat langsung mengunduhnya di website.
                       </span>
                     </div>
 
+                    {/* Fitur Upload Foto Warta / Berita */}
+                    <div className="sm:col-span-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                      <div className="flex flex-col sm:flex-row items-center gap-4">
+                        <div className="w-28 h-20 rounded-lg bg-slate-200 border border-slate-300 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                          {newAnnouncement.imageUrl ? (
+                            <img
+                              src={newAnnouncement.imageUrl}
+                              alt="Pratinjau Foto Berita"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="text-center text-slate-400 p-1">
+                              <ImageIcon className="w-5 h-5 mx-auto mb-0.5 opacity-60" />
+                              <span className="text-[10px] block leading-tight">Tanpa foto</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex-1 text-center sm:text-left space-y-1">
+                          <label className="font-semibold text-slate-800 block text-xs">
+                            Unggah Foto / Gambar Utama Berita (Opsional)
+                          </label>
+                          <p className="text-[11px] text-slate-500">
+                            Format JPG, PNG, atau WebP (maks 5MB). Foto akan langsung tampil di kartu warta dan surat resmi.
+                          </p>
+                          <div className="flex items-center gap-2 pt-1 justify-center sm:justify-start">
+                            <label
+                              htmlFor="ann-image-upload"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold rounded-lg text-xs cursor-pointer transition-colors shadow-xs"
+                            >
+                              <Upload className="w-3.5 h-3.5 text-amber-300" />
+                              <span>{newAnnouncement.imageUrl ? 'Ganti Foto' : 'Pilih Foto Berita'}</span>
+                            </label>
+                            <input
+                              ref={announcementImageInputRef}
+                              type="file"
+                              id="ann-image-upload"
+                              accept="image/*"
+                              onChange={handleAnnouncementImageUpload}
+                              className="hidden"
+                            />
+                            {newAnnouncement.imageUrl && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setNewAnnouncement((prev) => ({ ...prev, imageUrl: '' }));
+                                  if (announcementImageInputRef.current) announcementImageInputRef.current.value = '';
+                                }}
+                                className="px-2.5 py-1.5 text-rose-600 hover:bg-rose-50 rounded-lg text-xs"
+                              >
+                                Hapus Foto
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="sm:col-span-2">
-                      <label className="font-semibold text-slate-700 block mb-1">Isi Lengkap Surat Pengumuman *</label>
+                      <label className="font-semibold text-slate-700 block mb-1">Ringkasan Singkat (Lead Warta)</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: Kabar membanggakan datang dari tim robotik SMPN 14..."
+                        value={newAnnouncement.summary}
+                        onChange={(e) => setNewAnnouncement({ ...newAnnouncement, summary: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="font-semibold text-slate-700 block mb-1">Isi Lengkap Surat Pengumuman / Berita *</label>
                       <textarea
                         rows={3}
                         required
-                        placeholder="Tuliskan isi pengumuman secara mendetail..."
+                        placeholder="Tuliskan isi pengumuman atau berita secara mendetail..."
                         value={newAnnouncement.content}
                         onChange={(e) => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })}
                         className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
@@ -1833,7 +1935,7 @@ export const AdminPanel: React.FC = () => {
                       className="px-5 py-2 bg-blue-900 text-white font-semibold text-xs rounded-xl hover:bg-blue-800 transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
                     >
                       <Plus className="w-4 h-4 text-amber-300" />
-                      <span>Terbitkan Pengumuman</span>
+                      <span>Terbitkan Pengumuman / Berita</span>
                     </button>
                   </div>
                 </form>
@@ -1971,6 +2073,7 @@ export const AdminPanel: React.FC = () => {
                         onChange={(e) => {
                           const cat = e.target.value as ActivityPhoto['category'];
                           const labels: Record<string, string> = {
+                            osis: 'OSIS & Kepemimpinan',
                             upacara: 'Upacara & Nasionalisme',
                             pramuka: 'Kepramukaan & Karakter',
                             akademik: 'Sains & Lab',
@@ -1985,6 +2088,7 @@ export const AdminPanel: React.FC = () => {
                         }}
                         className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
                       >
+                        <option value="osis">OSIS &amp; Kepemimpinan Siswa</option>
                         <option value="upacara">Upacara &amp; Nasionalisme</option>
                         <option value="pramuka">Kepramukaan</option>
                         <option value="akademik">Sains &amp; Lab</option>
