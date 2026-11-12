@@ -89,7 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {schoolInfo.shortName || schoolInfo.name}
               </span>
               <span className="text-xs text-slate-500 font-medium block">
-                Unggul, Berkarakter &amp; Berbudaya Nenemo
+                Unggul, Berkarakter &amp; Berbudaya {schoolInfo.mottoValues ? schoolInfo.mottoValues.split(' ')[0] : 'Nenemo'}
               </span>
             </div>
           </button>

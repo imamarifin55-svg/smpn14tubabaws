@@ -26,10 +26,12 @@ import {
   Paperclip,
   Database,
   ExternalLink,
-  Cloud
+  Cloud,
+  Edit3
 } from 'lucide-react';
 import { useSchoolData } from '../context/SchoolDataContext';
 import { Teacher, ActivityPhoto, Announcement, Student } from '../data/schoolData';
+import { compressImage } from '../utils/imageCompressor';
 
 export const AdminPanel: React.FC = () => {
   const {
@@ -37,10 +39,12 @@ export const AdminPanel: React.FC = () => {
     updateSchoolInfo,
     teachers,
     addTeacher,
+    updateTeacher,
     deleteTeacher,
     importTeachers,
     students,
     addStudent,
+    updateStudent,
     deleteStudent,
     importStudents,
     announcements,
@@ -63,18 +67,27 @@ export const AdminPanel: React.FC = () => {
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
+  // Edit modal states for individual records
+  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+
   useEffect(() => {
     if (adminInitialTab) {
       setActiveTab(adminInitialTab);
     }
   }, [adminInitialTab, isAdminOpen]);
 
-  // Form states for Profil (including logoUrl)
+  // Form states for Profil (including full institutional metadata & logo)
   const [profileForm, setProfileForm] = useState({
     name: schoolInfo.name,
+    shortName: schoolInfo.shortName || 'SMPN 14 Tubaba',
     headmaster: schoolInfo.headmaster,
     npsn: schoolInfo.npsn,
     accreditation: schoolInfo.accreditation,
+    decreeNumber: schoolInfo.decreeNumber || '420/188/II.01/TUBABA/2016',
+    mottoLocal: schoolInfo.mottoLocal || 'Ragem Sai Mangi Wawai',
+    mottoValues: schoolInfo.mottoValues || 'Nenemo (Nemen, Nedes, Nerimo)',
     address: schoolInfo.address,
     phone: schoolInfo.phone,
     whatsapp: schoolInfo.whatsapp,
@@ -87,9 +100,13 @@ export const AdminPanel: React.FC = () => {
   useEffect(() => {
     setProfileForm({
       name: schoolInfo.name,
+      shortName: schoolInfo.shortName || 'SMPN 14 Tubaba',
       headmaster: schoolInfo.headmaster,
       npsn: schoolInfo.npsn,
       accreditation: schoolInfo.accreditation,
+      decreeNumber: schoolInfo.decreeNumber || '420/188/II.01/TUBABA/2016',
+      mottoLocal: schoolInfo.mottoLocal || 'Ragem Sai Mangi Wawai',
+      mottoValues: schoolInfo.mottoValues || 'Nenemo (Nemen, Nedes, Nerimo)',
       address: schoolInfo.address,
       phone: schoolInfo.phone,
       whatsapp: schoolInfo.whatsapp,
@@ -177,8 +194,8 @@ export const AdminPanel: React.FC = () => {
     setTimeout(() => setSuccessToast(null), 2500);
   };
 
-  // 1. Logo upload handler
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 1. Logo upload handler with canvas compression
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -187,23 +204,18 @@ export const AdminPanel: React.FC = () => {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Ukuran file logo maksimal 2MB.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
+    try {
+      const base64 = await compressImage(file, 400, 400, 0.85);
       setProfileForm((prev) => ({ ...prev, logoUrl: base64 }));
-      showSuccess('Logo berhasil dimuat! Klik Simpan Perubahan Profil untuk menerapkan.');
-    };
-    reader.readAsDataURL(file);
+      showSuccess('Logo berhasil dimuat & dikompresi optimal! Klik Simpan Perubahan Profil untuk menerapkan.');
+    } catch (err) {
+      alert('Gagal memproses foto logo.');
+    }
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateSchoolInfo({
+    await updateSchoolInfo({
       ...schoolInfo,
       ...profileForm
     });
@@ -211,7 +223,7 @@ export const AdminPanel: React.FC = () => {
   };
 
   // 2. Teacher Add & Excel Template/Import
-  const handleAddTeacher = (e: React.FormEvent) => {
+  const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTeacher.name || !newTeacher.subject) return;
 
@@ -233,7 +245,7 @@ export const AdminPanel: React.FC = () => {
       colorScheme: 'from-blue-700 to-indigo-900'
     };
 
-    addTeacher(teacherToAdd);
+    await addTeacher(teacherToAdd);
     setNewTeacher({
       name: '',
       nip: '',
@@ -383,9 +395,9 @@ export const AdminPanel: React.FC = () => {
     reader.readAsArrayBuffer(file);
   };
 
-  const handleApplyTeacherImport = () => {
+  const handleApplyTeacherImport = async () => {
     if (!teacherImportStatus || teacherImportStatus.preview.length === 0) return;
-    importTeachers(teacherImportStatus.preview);
+    await importTeachers(teacherImportStatus.preview);
     showSuccess(`Berhasil mengimpor ${teacherImportStatus.preview.length} data guru ke sistem!`);
     setTeacherImportStatus(null);
     if (teacherFileInputRef.current) {
@@ -394,7 +406,7 @@ export const AdminPanel: React.FC = () => {
   };
 
   // 3. Student Add & Excel Template/Import (.xlsx ONLY)
-  const handleAddStudent = (e: React.FormEvent) => {
+  const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStudent.fullName || !newStudent.nisn) {
       alert('Nama lengkap dan NISN wajib diisi.');
@@ -417,7 +429,7 @@ export const AdminPanel: React.FC = () => {
       status: 'Aktif'
     };
 
-    addStudent(studentToAdd);
+    await addStudent(studentToAdd);
     setNewStudent({
       nisn: '',
       nis: '',
@@ -592,9 +604,9 @@ export const AdminPanel: React.FC = () => {
     reader.readAsArrayBuffer(file);
   };
 
-  const handleApplyStudentImport = () => {
+  const handleApplyStudentImport = async () => {
     if (!studentImportStatus || studentImportStatus.preview.length === 0) return;
-    importStudents(studentImportStatus.preview);
+    await importStudents(studentImportStatus.preview);
     showSuccess(`Berhasil mengimpor ${studentImportStatus.preview.length} data peserta didik!`);
     setStudentImportStatus(null);
     if (studentFileInputRef.current) {
@@ -603,7 +615,7 @@ export const AdminPanel: React.FC = () => {
   };
 
   // 4. Announcement Add, Photo Cover Upload & Document Upload
-  const handleAnnouncementImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAnnouncementImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -612,29 +624,24 @@ export const AdminPanel: React.FC = () => {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran foto warta maksimal 5MB.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
+    try {
+      const base64 = await compressImage(file, 900, 600, 0.82);
       setNewAnnouncement((prev) => ({
         ...prev,
         imageUrl: base64
       }));
-      showSuccess(`Foto berita "${file.name}" berhasil diunggah!`);
-    };
-    reader.readAsDataURL(file);
+      showSuccess(`Foto warta "${file.name}" berhasil diunggah & dioptimalkan!`);
+    } catch (err) {
+      alert('Gagal memproses gambar berita.');
+    }
   };
 
   const handleAnnouncementFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran lampiran maksimal 5MB.');
+    if (file.size > 400 * 1024) {
+      alert('Ukuran lampiran maksimal 400KB untuk menjaga efisiensi database cloud.');
       return;
     }
 
@@ -651,7 +658,7 @@ export const AdminPanel: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleAddAnnouncement = (e: React.FormEvent) => {
+  const handleAddAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAnnouncement.title || !newAnnouncement.content) return;
 
@@ -673,7 +680,7 @@ export const AdminPanel: React.FC = () => {
       important: false
     };
 
-    addAnnouncement(annToAdd);
+    await addAnnouncement(annToAdd);
     setNewAnnouncement({
       title: '',
       category: 'Berita',
@@ -693,7 +700,7 @@ export const AdminPanel: React.FC = () => {
   };
 
   // 5. Activity Add & Photo Upload
-  const handleActivityImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleActivityImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -702,24 +709,19 @@ export const AdminPanel: React.FC = () => {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran foto maksimal 5MB.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
+    try {
+      const base64 = await compressImage(file, 1000, 750, 0.82);
       setNewActivity((prev) => ({
         ...prev,
         image: base64
       }));
-      showSuccess(`Foto ${file.name} berhasil diunggah untuk kegiatan!`);
-    };
-    reader.readAsDataURL(file);
+      showSuccess(`Foto ${file.name} berhasil diunggah & dioptimalkan!`);
+    } catch (err) {
+      alert('Gagal memproses foto kegiatan.');
+    }
   };
 
-  const handleAddActivity = (e: React.FormEvent) => {
+  const handleAddActivity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newActivity.title) return;
 
@@ -738,7 +740,7 @@ export const AdminPanel: React.FC = () => {
       caption: newActivity.caption || newActivity.title
     };
 
-    addActivity(actToAdd);
+    await addActivity(actToAdd);
     setNewActivity({
       title: '',
       category: 'akademik',
@@ -1054,15 +1056,28 @@ export const AdminPanel: React.FC = () => {
 
                 {/* Form Data Sekolah */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  <div className="sm:col-span-2">
+                  <div>
                     <label className="font-semibold text-slate-700 block mb-1">
-                      Nama Resmi Sekolah
+                      Nama Resmi Sekolah (Lengkap)
                     </label>
                     <input
                       type="text"
                       required
                       value={profileForm.name}
                       onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Nama Singkatan / Sebutan Populer (Header &amp; Navigasi)
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={profileForm.shortName}
+                      onChange={(e) => setProfileForm({ ...profileForm, shortName: e.target.value })}
                       className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-900"
                     />
                   </div>
@@ -1107,6 +1122,42 @@ export const AdminPanel: React.FC = () => {
 
                   <div>
                     <label className="font-semibold text-slate-700 block mb-1">
+                      SK Pendirian / Izin Operasional
+                    </label>
+                    <input
+                      type="text"
+                      value={profileForm.decreeNumber}
+                      onChange={(e) => setProfileForm({ ...profileForm, decreeNumber: e.target.value })}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Semboyan Budaya Daerah
+                    </label>
+                    <input
+                      type="text"
+                      value={profileForm.mottoLocal}
+                      onChange={(e) => setProfileForm({ ...profileForm, mottoLocal: e.target.value })}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Nilai Karakter / Falsafah Sekolah
+                    </label>
+                    <input
+                      type="text"
+                      value={profileForm.mottoValues}
+                      onChange={(e) => setProfileForm({ ...profileForm, mottoValues: e.target.value })}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">
                       Jam Operasional Sekolah
                     </label>
                     <input
@@ -1138,6 +1189,18 @@ export const AdminPanel: React.FC = () => {
                       value={profileForm.email}
                       onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
                       className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Nomor Telepon Kantor
+                    </label>
+                    <input
+                      type="text"
+                      value={profileForm.phone}
+                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-hidden focus:ring-2 focus:ring-blue-900"
                     />
                   </div>
 
@@ -1394,10 +1457,18 @@ export const AdminPanel: React.FC = () => {
                           <div className="font-bold text-slate-900">{teacher.name}</div>
                           <div className="text-slate-500 font-mono text-[11px]">NIP. {teacher.nip} · {teacher.subject}</div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <span className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
                             {teacher.role}
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => setEditingTeacher(teacher)}
+                            className="p-1.5 text-blue-700 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                            title="Edit data guru"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => {
                               if (confirm(`Hapus ${teacher.name} dari daftar guru?`)) {
@@ -1733,18 +1804,28 @@ export const AdminPanel: React.FC = () => {
                               <td className="py-2 px-3 text-slate-600 truncate max-w-xs">{st.address}</td>
                               <td className="py-2 px-3 text-slate-600">{st.parentName}</td>
                               <td className="py-2 px-3 text-right">
-                                <button
-                                  onClick={() => {
-                                    if (confirm(`Hapus data peserta didik ${st.fullName}?`)) {
-                                      deleteStudent(st.id);
-                                      showSuccess('Data siswa telah dihapus.');
-                                    }
-                                  }}
-                                  className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
-                                  title="Hapus siswa"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center justify-end gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingStudent(st)}
+                                    className="p-1.5 text-blue-700 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                                    title="Edit data siswa"
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`Hapus data peserta didik ${st.fullName}?`)) {
+                                        deleteStudent(st.id);
+                                        showSuccess('Data siswa telah dihapus.');
+                                      }
+                                    }}
+                                    className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                                    title="Hapus siswa"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -2240,6 +2321,271 @@ export const AdminPanel: React.FC = () => {
             )}
           </main>
         </div>
+
+        {/* Modal Edit Data Guru */}
+        {editingTeacher && (
+          <div className="fixed inset-0 z-60 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-xl p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-blue-900" />
+                  <span>Edit Data Guru / Tenaga Pendidik</span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setEditingTeacher(null)}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!editingTeacher.name || !editingTeacher.subject) return;
+                  await updateTeacher(editingTeacher.id, editingTeacher);
+                  showSuccess(`Data guru ${editingTeacher.name} berhasil diperbarui!`);
+                  setEditingTeacher(null);
+                }}
+                className="space-y-3 text-xs"
+              >
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Nama Lengkap &amp; Gelar</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingTeacher.name}
+                    onChange={(e) => setEditingTeacher({ ...editingTeacher, name: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">NIP</label>
+                    <input
+                      type="text"
+                      value={editingTeacher.nip}
+                      onChange={(e) => setEditingTeacher({ ...editingTeacher, nip: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Mata Pelajaran</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingTeacher.subject}
+                      onChange={(e) => setEditingTeacher({ ...editingTeacher, subject: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Jabatan / Peran</label>
+                    <input
+                      type="text"
+                      value={editingTeacher.role}
+                      onChange={(e) => setEditingTeacher({ ...editingTeacher, role: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Kategori</label>
+                    <select
+                      value={editingTeacher.category}
+                      onChange={(e) => setEditingTeacher({ ...editingTeacher, category: e.target.value as Teacher['category'] })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    >
+                      <option value="guru">Guru Mata Pelajaran</option>
+                      <option value="pimpinan">Pimpinan Sekolah</option>
+                      <option value="bk">Bimbingan Konseling (BK)</option>
+                      <option value="tendik">Tata Usaha &amp; Perpustakaan</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Pendidikan Terakhir</label>
+                  <input
+                    type="text"
+                    value={editingTeacher.education}
+                    onChange={(e) => setEditingTeacher({ ...editingTeacher, education: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTeacher(null)}
+                    className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Save className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Simpan Perubahan Guru</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Edit Data Siswa */}
+        {editingStudent && (
+          <div className="fixed inset-0 z-60 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-xl p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-blue-900" />
+                  <span>Edit Data Peserta Didik</span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setEditingStudent(null)}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!editingStudent.fullName || !editingStudent.nisn) return;
+                  await updateStudent(editingStudent.id, editingStudent);
+                  showSuccess(`Data siswa ${editingStudent.fullName} berhasil diperbarui!`);
+                  setEditingStudent(null);
+                }}
+                className="space-y-3 text-xs"
+              >
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Nama Lengkap Siswa</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingStudent.fullName}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, fullName: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">NISN</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingStudent.nisn}
+                      onChange={(e) => setEditingStudent({ ...editingStudent, nisn: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">NIS</label>
+                    <input
+                      type="text"
+                      value={editingStudent.nis}
+                      onChange={(e) => setEditingStudent({ ...editingStudent, nis: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Jenis Kelamin</label>
+                    <select
+                      value={editingStudent.gender}
+                      onChange={(e) => setEditingStudent({ ...editingStudent, gender: e.target.value as 'Laki-laki' | 'Perempuan' })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    >
+                      <option value="Laki-laki">Laki-laki</option>
+                      <option value="Perempuan">Perempuan</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Tingkat</label>
+                    <select
+                      value={editingStudent.grade}
+                      onChange={(e) => setEditingStudent({ ...editingStudent, grade: e.target.value as 'VII' | 'VIII' | 'IX' })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    >
+                      <option value="VII">VII</option>
+                      <option value="VIII">VIII</option>
+                      <option value="IX">IX</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Rombel</label>
+                    <input
+                      type="text"
+                      value={editingStudent.rombel}
+                      onChange={(e) => setEditingStudent({ ...editingStudent, rombel: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Nama Orang Tua</label>
+                    <input
+                      type="text"
+                      value={editingStudent.parentName}
+                      onChange={(e) => setEditingStudent({ ...editingStudent, parentName: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">No HP Ortu</label>
+                    <input
+                      type="text"
+                      value={editingStudent.parentPhone}
+                      onChange={(e) => setEditingStudent({ ...editingStudent, parentPhone: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Alamat</label>
+                  <input
+                    type="text"
+                    value={editingStudent.address}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, address: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setEditingStudent(null)}
+                    className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Save className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Simpan Perubahan Siswa</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Floating Toast Notification */}
         {successToast && (

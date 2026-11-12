@@ -20,7 +20,7 @@ import { useSchoolData } from '../context/SchoolDataContext';
 import { Student } from '../data/schoolData';
 
 export const StudentDirectory: React.FC = () => {
-  const { students, setIsAdminOpen, setAdminInitialTab } = useSchoolData();
+  const { schoolInfo, students, setIsAdminOpen, setAdminInitialTab } = useSchoolData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrade, setSelectedGrade] = useState<'all' | 'VII' | 'VIII' | 'IX'>('all');
@@ -113,10 +113,10 @@ export const StudentDirectory: React.FC = () => {
               <span>Direktori Peserta Didik</span>
             </div>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
-              Data Peserta Didik SMPN 14
+              Data Peserta Didik {schoolInfo.shortName || schoolInfo.name}
             </h2>
             <p className="mt-2 text-sm sm:text-base text-slate-600 max-w-2xl leading-relaxed">
-              Daftar resmi peserta didik aktif SMP Negeri 14 Tulang Bawang Barat yang terdaftar 
+              Daftar resmi peserta didik aktif <strong>{schoolInfo.name}</strong> yang terdaftar 
               dalam pangkalan data Dapodikdasmen Kemdikbudristek RI.
             </p>
           </div>

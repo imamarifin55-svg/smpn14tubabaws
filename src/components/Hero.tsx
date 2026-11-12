@@ -27,14 +27,14 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPPDB, onNavigate }) => {
 
             {/* Display Headline with balanced wrapping */}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.18] text-balance mb-5">
-              Mendidik Generasi Berilmu, Berakhlak Mulia &amp; Berbudaya <span className="text-blue-900">Nenemo</span>
+              Mendidik Generasi Berilmu, Berakhlak Mulia &amp; Berbudaya <span className="text-blue-900">{schoolInfo.mottoValues?.split(' ')[0] || 'Nenemo'}</span>
             </h1>
 
             {/* Body Prose */}
             <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mb-8">
-              Selamat datang di portal resmi <strong>SMP Negeri 14 Tulang Bawang Barat</strong>. 
+              Selamat datang di portal resmi <strong>{schoolInfo.name}</strong>. 
               Kami berkomitmen menyelenggarakan pendidikan menengah pertama yang bermutu tinggi, memupuk 
-              kreativitas, sains, serta melestarikan kearifan lokal <em>Ragem Sai Mangi Wawai</em> di Provinsi Lampung.
+              kreativitas, sains, serta melestarikan kearifan lokal <em>{schoolInfo.mottoLocal}</em> di Provinsi Lampung.
             </p>
 
             {/* CTAs */}

@@ -168,12 +168,15 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       doc(db, 'school_info', 'main'),
       (snapshot) => {
         if (snapshot.exists()) {
-          setSchoolInfo(snapshot.data() as SchoolInfoType);
+          const data = snapshot.data() as SchoolInfoType;
+          setSchoolInfo(data);
+          localStorage.setItem('smpn14_school_info', JSON.stringify(data));
           setIsFirebaseConnected(true);
         }
       },
       (error) => {
-        handleFirestoreError(error, OperationType.GET, 'school_info/main');
+        console.warn('School info onSnapshot warning:', error);
+        setIsFirebaseConnected(false);
       }
     );
 
@@ -185,11 +188,13 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           const list: Teacher[] = [];
           snapshot.forEach((d) => list.push(d.data() as Teacher));
           setTeachers(list);
+          localStorage.setItem('smpn14_teachers', JSON.stringify(list));
           setIsFirebaseConnected(true);
         }
       },
       (error) => {
-        handleFirestoreError(error, OperationType.GET, 'teachers');
+        console.warn('Teachers onSnapshot warning:', error);
+        setIsFirebaseConnected(false);
       }
     );
 
@@ -201,11 +206,13 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           const list: Student[] = [];
           snapshot.forEach((d) => list.push(d.data() as Student));
           setStudents(list);
+          localStorage.setItem('smpn14_students', JSON.stringify(list));
           setIsFirebaseConnected(true);
         }
       },
       (error) => {
-        handleFirestoreError(error, OperationType.GET, 'students');
+        console.warn('Students onSnapshot warning:', error);
+        setIsFirebaseConnected(false);
       }
     );
 
@@ -217,11 +224,13 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           const list: Announcement[] = [];
           snapshot.forEach((d) => list.push(d.data() as Announcement));
           setAnnouncements(list);
+          localStorage.setItem('smpn14_announcements', JSON.stringify(list));
           setIsFirebaseConnected(true);
         }
       },
       (error) => {
-        handleFirestoreError(error, OperationType.GET, 'announcements');
+        console.warn('Announcements onSnapshot warning:', error);
+        setIsFirebaseConnected(false);
       }
     );
 
@@ -233,11 +242,13 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           const list: ActivityPhoto[] = [];
           snapshot.forEach((d) => list.push(d.data() as ActivityPhoto));
           setActivities(list);
+          localStorage.setItem('smpn14_activities', JSON.stringify(list));
           setIsFirebaseConnected(true);
         }
       },
       (error) => {
-        handleFirestoreError(error, OperationType.GET, 'activities');
+        console.warn('Activities onSnapshot warning:', error);
+        setIsFirebaseConnected(false);
       }
     );
 
@@ -249,11 +260,13 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           const list: PPDBApplicant[] = [];
           snapshot.forEach((d) => list.push(d.data() as PPDBApplicant));
           setApplicants(list);
+          localStorage.setItem('smpn14_ppdb_applicants', JSON.stringify(list));
           setIsFirebaseConnected(true);
         }
       },
       (error) => {
-        handleFirestoreError(error, OperationType.GET, 'ppdb_applicants');
+        console.warn('Applicants onSnapshot warning:', error);
+        setIsFirebaseConnected(false);
       }
     );
 
@@ -270,56 +283,68 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Update School Info
   const updateSchoolInfo = async (info: SchoolInfoType) => {
     setSchoolInfo(info);
+    localStorage.setItem('smpn14_school_info', JSON.stringify(info));
     setSyncStatus('syncing');
     try {
       await setDoc(doc(db, 'school_info', 'main'), info);
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore updateSchoolInfo warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.WRITE, 'school_info/main');
     }
   };
 
   // Teachers CRUD
   const addTeacher = async (teacher: Teacher) => {
-    setTeachers((prev) => [teacher, ...prev]);
+    setTeachers((prev) => {
+      const updated = [teacher, ...prev.filter((t) => t.id !== teacher.id)];
+      localStorage.setItem('smpn14_teachers', JSON.stringify(updated));
+      return updated;
+    });
     setSyncStatus('syncing');
     try {
       await setDoc(doc(db, 'teachers', teacher.id), teacher);
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore addTeacher warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.WRITE, `teachers/${teacher.id}`);
     }
   };
 
   const updateTeacher = async (id: string, updated: Partial<Teacher>) => {
-    setTeachers((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updated } : t))
-    );
+    setTeachers((prev) => {
+      const newList = prev.map((t) => (t.id === id ? { ...t, ...updated } : t));
+      localStorage.setItem('smpn14_teachers', JSON.stringify(newList));
+      return newList;
+    });
     setSyncStatus('syncing');
     try {
       await updateDoc(doc(db, 'teachers', id), updated);
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore updateTeacher warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.UPDATE, `teachers/${id}`);
     }
   };
 
   const deleteTeacher = async (id: string) => {
-    setTeachers((prev) => prev.filter((t) => t.id !== id));
+    setTeachers((prev) => {
+      const filtered = prev.filter((t) => t.id !== id);
+      localStorage.setItem('smpn14_teachers', JSON.stringify(filtered));
+      return filtered;
+    });
     setSyncStatus('syncing');
     try {
       await deleteDoc(doc(db, 'teachers', id));
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore deleteTeacher warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.DELETE, `teachers/${id}`);
     }
   };
 
   const importTeachers = async (newTeachers: Teacher[]) => {
+    let combined: Teacher[] = [];
     setTeachers((prev) => {
       const existingMap = new Map(
         prev.map((t) => [t.nip && t.nip !== '-' ? t.nip : t.name.toLowerCase(), t])
@@ -328,7 +353,9 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         const key = nt.nip && nt.nip !== '-' ? nt.nip : nt.name.toLowerCase();
         existingMap.set(key, nt);
       });
-      return Array.from(existingMap.values());
+      combined = Array.from(existingMap.values());
+      localStorage.setItem('smpn14_teachers', JSON.stringify(combined));
+      return combined;
     });
 
     setSyncStatus('syncing');
@@ -340,71 +367,91 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       await batch.commit();
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore importTeachers warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.WRITE, 'teachers');
     }
   };
 
   // Activities CRUD
   const addActivity = async (activity: ActivityPhoto) => {
-    setActivities((prev) => [activity, ...prev]);
+    setActivities((prev) => {
+      const updated = [activity, ...prev.filter((a) => a.id !== activity.id)];
+      localStorage.setItem('smpn14_activities', JSON.stringify(updated));
+      return updated;
+    });
     setSyncStatus('syncing');
     try {
       await setDoc(doc(db, 'activities', activity.id), activity);
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore addActivity warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.WRITE, `activities/${activity.id}`);
     }
   };
 
   const deleteActivity = async (id: string) => {
-    setActivities((prev) => prev.filter((a) => a.id !== id));
+    setActivities((prev) => {
+      const filtered = prev.filter((a) => a.id !== id);
+      localStorage.setItem('smpn14_activities', JSON.stringify(filtered));
+      return filtered;
+    });
     setSyncStatus('syncing');
     try {
       await deleteDoc(doc(db, 'activities', id));
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore deleteActivity warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.DELETE, `activities/${id}`);
     }
   };
 
   // Announcements CRUD
   const addAnnouncement = async (announcement: Announcement) => {
-    setAnnouncements((prev) => [announcement, ...prev]);
+    setAnnouncements((prev) => {
+      const updated = [announcement, ...prev.filter((a) => a.id !== announcement.id)];
+      localStorage.setItem('smpn14_announcements', JSON.stringify(updated));
+      return updated;
+    });
     setSyncStatus('syncing');
     try {
       await setDoc(doc(db, 'announcements', announcement.id), announcement);
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore addAnnouncement warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.WRITE, `announcements/${announcement.id}`);
     }
   };
 
   const deleteAnnouncement = async (id: string) => {
-    setAnnouncements((prev) => prev.filter((ann) => ann.id !== id));
+    setAnnouncements((prev) => {
+      const filtered = prev.filter((ann) => ann.id !== id);
+      localStorage.setItem('smpn14_announcements', JSON.stringify(filtered));
+      return filtered;
+    });
     setSyncStatus('syncing');
     try {
       await deleteDoc(doc(db, 'announcements', id));
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore deleteAnnouncement warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.DELETE, `announcements/${id}`);
     }
   };
 
   // PPDB Applicants CRUD
   const addApplicant = async (applicant: PPDBApplicant) => {
-    setApplicants((prev) => [applicant, ...prev]);
+    setApplicants((prev) => {
+      const updated = [applicant, ...prev.filter((a) => a.registrationNumber !== applicant.registrationNumber)];
+      localStorage.setItem('smpn14_ppdb_applicants', JSON.stringify(updated));
+      return updated;
+    });
     setSyncStatus('syncing');
     try {
       await setDoc(doc(db, 'ppdb_applicants', applicant.registrationNumber), applicant);
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore addApplicant warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.WRITE, `ppdb_applicants/${applicant.registrationNumber}`);
     }
   };
 
@@ -413,8 +460,8 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     status: PPDBApplicant['status'],
     notes?: string
   ) => {
-    setApplicants((prev) =>
-      prev.map((app) =>
+    setApplicants((prev) => {
+      const updated = prev.map((app) =>
         app.registrationNumber === regNumber
           ? {
               ...app,
@@ -422,8 +469,10 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
               ...(notes ? { notes } : {})
             }
           : app
-      )
-    );
+      );
+      localStorage.setItem('smpn14_ppdb_applicants', JSON.stringify(updated));
+      return updated;
+    });
     setSyncStatus('syncing');
     try {
       await updateDoc(doc(db, 'ppdb_applicants', regNumber), {
@@ -432,57 +481,70 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       });
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore updateApplicantStatus warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.UPDATE, `ppdb_applicants/${regNumber}`);
     }
   };
 
   // Students CRUD
   const addStudent = async (student: Student) => {
-    setStudents((prev) => [student, ...prev]);
+    setStudents((prev) => {
+      const updated = [student, ...prev.filter((s) => s.id !== student.id)];
+      localStorage.setItem('smpn14_students', JSON.stringify(updated));
+      return updated;
+    });
     setSyncStatus('syncing');
     try {
       await setDoc(doc(db, 'students', student.id), student);
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore addStudent warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.WRITE, `students/${student.id}`);
     }
   };
 
   const updateStudent = async (id: string, updated: Partial<Student>) => {
-    setStudents((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, ...updated } : s))
-    );
+    setStudents((prev) => {
+      const newList = prev.map((s) => (s.id === id ? { ...s, ...updated } : s));
+      localStorage.setItem('smpn14_students', JSON.stringify(newList));
+      return newList;
+    });
     setSyncStatus('syncing');
     try {
       await updateDoc(doc(db, 'students', id), updated);
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore updateStudent warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.UPDATE, `students/${id}`);
     }
   };
 
   const deleteStudent = async (id: string) => {
-    setStudents((prev) => prev.filter((s) => s.id !== id));
+    setStudents((prev) => {
+      const filtered = prev.filter((s) => s.id !== id);
+      localStorage.setItem('smpn14_students', JSON.stringify(filtered));
+      return filtered;
+    });
     setSyncStatus('syncing');
     try {
       await deleteDoc(doc(db, 'students', id));
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore deleteStudent warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.DELETE, `students/${id}`);
     }
   };
 
   const importStudents = async (newStudents: Student[]) => {
+    let combined: Student[] = [];
     setStudents((prev) => {
       const existingMap = new Map(prev.map((s) => [s.nisn, s]));
       newStudents.forEach((ns) => {
         existingMap.set(ns.nisn, ns);
       });
-      return Array.from(existingMap.values());
+      combined = Array.from(existingMap.values());
+      localStorage.setItem('smpn14_students', JSON.stringify(combined));
+      return combined;
     });
 
     setSyncStatus('syncing');
@@ -494,8 +556,8 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       await batch.commit();
       setSyncStatus('synced');
     } catch (err) {
+      console.warn('Firestore importStudents warning:', err);
       setSyncStatus('offline');
-      handleFirestoreError(err, OperationType.WRITE, 'students');
     }
   };
 

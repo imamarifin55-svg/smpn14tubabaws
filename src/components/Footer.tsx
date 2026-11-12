@@ -91,7 +91,7 @@ export const Footer: React.FC = () => {
               <Clock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
               <div>
                 <span className="block text-slate-300 font-medium">Jam Pelayanan Kantor:</span>
-                <span className="text-slate-400">Senin - Jumat: 07.15 - 15.00 WIB</span>
+                <span className="text-slate-400">{schoolInfo.workingHours || 'Senin - Jumat: 07.15 - 15.00 WIB'}</span>
               </div>
             </div>
           </div>

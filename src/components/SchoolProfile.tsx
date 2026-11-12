@@ -44,7 +44,7 @@ export const SchoolProfile: React.FC = () => {
             Membangun Karakter Unggul Berakar pada Kearifan Tulang Bawang Barat
           </h2>
           <p className="mt-3 text-base text-slate-600 leading-relaxed">
-            SMP Negeri 14 Tulang Bawang Barat didirikan sebagai wujud komitmen pemerintah daerah dan masyarakat 
+            <strong>{schoolInfo.name}</strong> didirikan sebagai wujud komitmen pemerintah daerah dan masyarakat 
             dalam menghadirkan layanan pendidikan bermutu yang merata bagi seluruh putra-putri daerah.
           </p>
         </div>
@@ -58,16 +58,23 @@ export const SchoolProfile: React.FC = () => {
                 <div className="w-full h-full rounded-[14px] bg-slate-900 flex flex-col items-center justify-center text-white relative overflow-hidden">
                   <div className="absolute inset-0 bg-blue-800/20 mix-blend-overlay"></div>
                   <div className="w-20 h-20 rounded-full bg-blue-800 flex items-center justify-center text-amber-300 text-3xl font-bold font-mono">
-                    SK
+                    {schoolInfo.headmaster
+                      ? schoolInfo.headmaster
+                          .split(' ')
+                          .filter((w) => !w.includes('.') && !w.includes(','))
+                          .map((w) => w[0])
+                          .slice(0, 2)
+                          .join('') || 'KS'
+                      : 'KS'}
                   </div>
                   <span className="text-xs font-medium text-slate-300 mt-3">Kepala Sekolah</span>
-                  <span className="text-xs text-amber-400 font-semibold">SMPN 14 Tubaba</span>
+                  <span className="text-xs text-amber-400 font-semibold">{schoolInfo.shortName || schoolInfo.name}</span>
                 </div>
               </div>
               <h3 className="mt-4 text-lg font-bold text-slate-900">{schoolInfo.headmaster}</h3>
-              <p className="text-xs text-slate-500 font-mono">NIP. 19680315 199303 1 004</p>
+              <p className="text-xs text-slate-500 font-mono">Kepala {schoolInfo.shortName || schoolInfo.name}</p>
               <span className="mt-2 text-xs text-blue-900 font-medium">
-                Magister Manajemen Pendidikan (UNILA)
+                Pendidikan Berkualitas &amp; Berkarakter
               </span>
             </div>
 
@@ -83,7 +90,7 @@ export const SchoolProfile: React.FC = () => {
               <blockquote className="text-base sm:text-lg text-slate-800 leading-relaxed font-normal">
                 &ldquo;Pendidikan sejati bukan sekadar mentransfer pengetahuan akademik dari buku ke lembar ujian, melainkan 
                 menyalakan lentera budi pekerti, menumbuhkan rasa ingin tahu ilmiah, dan membentuk pribadi yang tangguh menghadapi peradaban abad 21. 
-                Di SMPN 14 Tulang Bawang Barat, kami merajut keunggulan sains terapan dengan nilai luhur Nenemo: 
+                Di {schoolInfo.name}, kami merajut keunggulan sains terapan dengan nilai luhur {schoolInfo.mottoValues || 'Nenemo (Nemen, Nedes, Nerimo)'}: 
                 bekerja keras (nemen), ulet dan tahan uji (nedes), serta senantiasa ikhlas dan berakhlak mulia (nerimo). 
                 Mari bersama kita hantarkan anak-anak kita menjadi tunas bangsa yang berkarakter, berbudaya, dan berprestasi.&rdquo;
               </blockquote>
