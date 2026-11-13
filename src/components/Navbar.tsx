@@ -67,21 +67,22 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Main 3-Zone Navigation Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-8 h-18">
+        <div className="flex items-center justify-between gap-8 h-20">
           {/* Zone 1: Single Brand Wordmark Element */}
           <button
             onClick={() => handleNavClick('beranda')}
-            className="flex items-center gap-3 text-left group whitespace-nowrap shrink-0 focus:outline-hidden"
+            className="flex items-center gap-3.5 text-left group whitespace-nowrap shrink-0 focus:outline-hidden"
           >
-            <div className="w-10 h-10 rounded-xl bg-blue-900 text-amber-400 flex items-center justify-center shadow-xs ring-1 ring-blue-800/20 group-hover:bg-blue-800 transition-colors overflow-hidden">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shrink-0 overflow-hidden bg-transparent">
               {schoolInfo.logoUrl ? (
                 <img
                   src={schoolInfo.logoUrl}
                   alt={schoolInfo.name}
-                  className="w-full h-full object-contain p-1"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain"
                 />
               ) : (
-                <GraduationCap className="w-6 h-6" />
+                <GraduationCap className="w-10 h-10 text-blue-900" />
               )}
             </div>
             <div>

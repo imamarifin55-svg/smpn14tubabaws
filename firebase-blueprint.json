@@ -18,6 +18,15 @@
         "email": { "type": "string", "maxLength": 100 },
         "workingHours": { "type": "string", "maxLength": 100 },
         "logoUrl": { "type": "string" },
+        "campusImageUrl": { "type": "string" },
+        "campusTitle": { "type": "string", "maxLength": 150 },
+        "campusDescription": { "type": "string", "maxLength": 350 },
+        "headmasterPhotoUrl": { "type": "string" },
+        "headmasterNip": { "type": "string", "maxLength": 50 },
+        "headmasterEducation": { "type": "string", "maxLength": 150 },
+        "headmasterQuote": { "type": "string", "maxLength": 3000 },
+        "vision": { "type": "string", "maxLength": 1000 },
+        "missions": { "type": "array" },
         "updatedAt": { "type": "string" }
       },
       "required": ["name", "npsn", "headmaster"]

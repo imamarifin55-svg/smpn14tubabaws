@@ -27,7 +27,11 @@ import {
   Database,
   ExternalLink,
   Cloud,
-  Edit3
+  Edit3,
+  Building2,
+  Target,
+  Quote,
+  BookOpen
 } from 'lucide-react';
 import { useSchoolData } from '../context/SchoolDataContext';
 import { Teacher, ActivityPhoto, Announcement, Student } from '../data/schoolData';
@@ -63,7 +67,7 @@ export const AdminPanel: React.FC = () => {
     syncStatus
   } = useSchoolData();
 
-  const [activeTab, setActiveTab] = useState<'profil' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'ppdb'>('profil');
+  const [activeTab, setActiveTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'ppdb'>('profil');
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
@@ -78,11 +82,17 @@ export const AdminPanel: React.FC = () => {
     }
   }, [adminInitialTab, isAdminOpen]);
 
-  // Form states for Profil (including full institutional metadata & logo)
+  // Form states for Profil, Kampus, Sambutan Kepala Sekolah, & Visi Misi
   const [profileForm, setProfileForm] = useState({
     name: schoolInfo.name,
     shortName: schoolInfo.shortName || 'SMPN 14 Tubaba',
     headmaster: schoolInfo.headmaster,
+    headmasterNip: schoolInfo.headmasterNip || '19680315 199303 1 004',
+    headmasterEducation: schoolInfo.headmasterEducation || 'Magister Manajemen Pendidikan (UNILA)',
+    headmasterPhotoUrl: schoolInfo.headmasterPhotoUrl || '',
+    headmasterQuote: schoolInfo.headmasterQuote || '',
+    vision: schoolInfo.vision || '',
+    missions: schoolInfo.missions && schoolInfo.missions.length > 0 ? schoolInfo.missions : [''],
     npsn: schoolInfo.npsn,
     accreditation: schoolInfo.accreditation,
     decreeNumber: schoolInfo.decreeNumber || '420/188/II.01/TUBABA/2016',
@@ -93,7 +103,10 @@ export const AdminPanel: React.FC = () => {
     whatsapp: schoolInfo.whatsapp,
     email: schoolInfo.email,
     workingHours: schoolInfo.workingHours,
-    logoUrl: schoolInfo.logoUrl || ''
+    logoUrl: schoolInfo.logoUrl || '',
+    campusImageUrl: schoolInfo.campusImageUrl || '',
+    campusTitle: schoolInfo.campusTitle || 'Gedung Terpadu SMPN 14 Tubaba',
+    campusDescription: schoolInfo.campusDescription || ''
   });
 
   // Keep profileForm in sync when schoolInfo changes
@@ -102,6 +115,12 @@ export const AdminPanel: React.FC = () => {
       name: schoolInfo.name,
       shortName: schoolInfo.shortName || 'SMPN 14 Tubaba',
       headmaster: schoolInfo.headmaster,
+      headmasterNip: schoolInfo.headmasterNip || '19680315 199303 1 004',
+      headmasterEducation: schoolInfo.headmasterEducation || 'Magister Manajemen Pendidikan (UNILA)',
+      headmasterPhotoUrl: schoolInfo.headmasterPhotoUrl || '',
+      headmasterQuote: schoolInfo.headmasterQuote || '',
+      vision: schoolInfo.vision || '',
+      missions: schoolInfo.missions && schoolInfo.missions.length > 0 ? schoolInfo.missions : [''],
       npsn: schoolInfo.npsn,
       accreditation: schoolInfo.accreditation,
       decreeNumber: schoolInfo.decreeNumber || '420/188/II.01/TUBABA/2016',
@@ -112,12 +131,17 @@ export const AdminPanel: React.FC = () => {
       whatsapp: schoolInfo.whatsapp,
       email: schoolInfo.email,
       workingHours: schoolInfo.workingHours,
-      logoUrl: schoolInfo.logoUrl || ''
+      logoUrl: schoolInfo.logoUrl || '',
+      campusImageUrl: schoolInfo.campusImageUrl || '',
+      campusTitle: schoolInfo.campusTitle || 'Gedung Terpadu SMPN 14 Tubaba',
+      campusDescription: schoolInfo.campusDescription || ''
     });
   }, [schoolInfo]);
 
-  // Logo upload ref
+  // Image upload refs
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const campusImageInputRef = useRef<HTMLInputElement>(null);
+  const headmasterPhotoInputRef = useRef<HTMLInputElement>(null);
 
   // Form states for New Teacher
   const [newTeacher, setNewTeacher] = useState({
@@ -194,32 +218,111 @@ export const AdminPanel: React.FC = () => {
     setTimeout(() => setSuccessToast(null), 2500);
   };
 
-  // 1. Logo upload handler with canvas compression
+  // 1. Logo, School/Campus Photo & Headmaster Photo upload handlers with canvas compression & instant cloud persistence
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
       alert('Mohon pilih file gambar (PNG, JPG, SVG, WebP).');
+      e.target.value = '';
       return;
     }
 
     try {
-      const base64 = await compressImage(file, 400, 400, 0.85);
-      setProfileForm((prev) => ({ ...prev, logoUrl: base64 }));
-      showSuccess('Logo berhasil dimuat & dikompresi optimal! Klik Simpan Perubahan Profil untuk menerapkan.');
-    } catch (err) {
+      const base64 = await compressImage(file, 400, 400, 0.85, 160000);
+      const nextForm = { ...profileForm, logoUrl: base64 };
+      setProfileForm(nextForm);
+      const cleanMissions = nextForm.missions.map((m) => m.trim()).filter(Boolean);
+      await updateSchoolInfo({
+        ...schoolInfo,
+        ...nextForm,
+        missions: cleanMissions.length > 0 ? cleanMissions : schoolInfo.missions
+      });
+      showSuccess('Logo sekolah berhasil diunggah & langsung tampil di website!');
+    } catch {
       alert('Gagal memproses foto logo.');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleCampusImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Mohon pilih file foto gambar (JPG, PNG, WebP).');
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      const base64 = await compressImage(file, 1000, 700, 0.8, 220000);
+      const nextForm = { ...profileForm, campusImageUrl: base64 };
+      setProfileForm(nextForm);
+      const cleanMissions = nextForm.missions.map((m) => m.trim()).filter(Boolean);
+      await updateSchoolInfo({
+        ...schoolInfo,
+        ...nextForm,
+        missions: cleanMissions.length > 0 ? cleanMissions : schoolInfo.missions
+      });
+      showSuccess('Foto sekolah berhasil diunggah & langsung mengganti foto Gedung Terpadu di Beranda!');
+    } catch {
+      alert('Gagal memproses foto sekolah.');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleHeadmasterPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Mohon pilih file foto gambar (JPG, PNG, WebP).');
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      const base64 = await compressImage(file, 600, 750, 0.82, 180000);
+      const nextForm = { ...profileForm, headmasterPhotoUrl: base64 };
+      setProfileForm(nextForm);
+      const cleanMissions = nextForm.missions.map((m) => m.trim()).filter(Boolean);
+      await updateSchoolInfo({
+        ...schoolInfo,
+        ...nextForm,
+        missions: cleanMissions.length > 0 ? cleanMissions : schoolInfo.missions
+      });
+      showSuccess('Foto Kepala Sekolah berhasil diunggah & langsung diterapkan!');
+    } catch {
+      alert('Gagal memproses foto Kepala Sekolah.');
+    } finally {
+      e.target.value = '';
     }
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanMissions = profileForm.missions.map((m) => m.trim()).filter(Boolean);
     await updateSchoolInfo({
       ...schoolInfo,
-      ...profileForm
+      ...profileForm,
+      missions: cleanMissions.length > 0 ? cleanMissions : schoolInfo.missions
     });
-    showSuccess('Profil sekolah & logo berhasil disimpan!');
+    showSuccess('Profil, logo, dan foto kampus berhasil disimpan ke website & cloud!');
+  };
+
+  const handleSaveSambutanVisi = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanMissions = profileForm.missions.map((m) => m.trim()).filter(Boolean);
+    await updateSchoolInfo({
+      ...schoolInfo,
+      ...profileForm,
+      missions: cleanMissions.length > 0 ? cleanMissions : schoolInfo.missions
+    });
+    showSuccess('Sambutan Kepala Sekolah, Foto, serta Visi & Misi berhasil disimpan!');
   };
 
   // 2. Teacher Add & Excel Template/Import
@@ -835,7 +938,19 @@ export const AdminPanel: React.FC = () => {
                 }`}
               >
                 <School className="w-4 h-4 shrink-0" />
-                <span className="truncate">Profil Sekolah &amp; Logo</span>
+                <span className="truncate">Profil, Logo &amp; Kampus</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('sambutan-visi')}
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
+                  activeTab === 'sambutan-visi'
+                    ? 'bg-blue-900 text-white shadow-xs font-bold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <Quote className="w-4 h-4 shrink-0 text-amber-400" />
+                <span className="truncate">Sambutan &amp; Visi Misi</span>
               </button>
 
               <button
@@ -975,14 +1090,24 @@ export const AdminPanel: React.FC = () => {
 
           {/* Right Main Content Body */}
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50/50">
-            {/* TAB: PROFIL SEKOLAH & UNGGAH LOGO */}
+            {/* TAB: PROFIL SEKOLAH, LOGO & UNGGAH FOTO KAMPUS */}
             {activeTab === 'profil' && (
               <form onSubmit={handleSaveProfile} className="max-w-3xl space-y-6 animate-in fade-in duration-200">
-                <div className="border-b border-slate-200 pb-3">
-                  <h3 className="text-lg font-bold text-slate-900">Pengaturan Identitas &amp; Logo Sekolah</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Unggah logo resmi sekolah dan perbarui data umum yang tampil di website.
-                  </p>
+                <div className="border-b border-slate-200 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">Pengaturan Identitas, Logo &amp; Foto Kampus</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Unggah logo resmi, foto gedung kampus SMPN 14 Tubaba, dan perbarui profil sekolah.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('sambutan-visi')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg text-[11px] font-semibold cursor-pointer self-start sm:self-auto"
+                  >
+                    <Quote className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Edit Sambutan Kepsek &amp; Visi Misi</span>
+                  </button>
                 </div>
 
                 {/* Fitur Unggah Logo Sekolah */}
@@ -993,8 +1118,8 @@ export const AdminPanel: React.FC = () => {
                   </h4>
 
                   <div className="flex flex-col sm:flex-row items-center gap-6">
-                    {/* Logo Preview Container */}
-                    <div className="w-24 h-24 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden shrink-0 shadow-inner p-2 relative group">
+                    {/* Logo Preview Container (Clean & Transparent without blue background) */}
+                    <div className="w-28 h-28 rounded-2xl bg-slate-50 border border-dashed border-slate-300 flex items-center justify-center overflow-hidden shrink-0 p-1 relative">
                       {profileForm.logoUrl ? (
                         <img
                           src={profileForm.logoUrl}
@@ -1003,7 +1128,7 @@ export const AdminPanel: React.FC = () => {
                         />
                       ) : (
                         <div className="text-center text-slate-400">
-                          <School className="w-8 h-8 mx-auto mb-1 opacity-50" />
+                          <School className="w-9 h-9 mx-auto mb-1 opacity-50" />
                           <span className="text-[10px] block">Belum ada logo</span>
                         </div>
                       )}
@@ -1012,14 +1137,13 @@ export const AdminPanel: React.FC = () => {
                     {/* Logo Upload Actions */}
                     <div className="space-y-2 flex-1 text-center sm:text-left">
                       <p className="text-xs font-semibold text-slate-800">
-                        Pilih file logo sekolah (Format: PNG, JPG, WebP, SVG)
+                        Pilih file logo sekolah (Format: PNG transparan, JPG, WebP, SVG)
                       </p>
                       <p className="text-[11px] text-slate-500">
-                        Disarankan logo berlatar transparan (PNG) dengan resolusi minimal 200x200 piksel, maksimal 2MB. 
-                        Logo ini otomatis muncul di navigasi header dan footer sekolah.
+                        Logo tampil besar dan jernih tanpa latar belakang biru pada Header Navigasi dan Footer website.
                       </p>
 
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <div className="flex flex-wrap items-center gap-2 pt-1 justify-center sm:justify-start">
                         <label
                           htmlFor="school-logo-input"
                           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
@@ -1042,7 +1166,7 @@ export const AdminPanel: React.FC = () => {
                             onClick={() => {
                               setProfileForm((prev) => ({ ...prev, logoUrl: '' }));
                               if (logoInputRef.current) logoInputRef.current.value = '';
-                              showSuccess('Logo dihapus. Kembali ke lambang standar.');
+                              showSuccess('Logo dihapus. Klik Simpan Perubahan untuk menerapkan.');
                             }}
                             className="px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
                           >
@@ -1051,6 +1175,133 @@ export const AdminPanel: React.FC = () => {
                         )}
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* Fitur Upload Foto Sekolah (Mengganti Foto Gedung Terpadu) */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      <span>Upload Foto Sekolah (Mengganti Foto Gedung Terpadu)</span>
+                    </h4>
+                    <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md">
+                      Otomatis tersimpan ke Beranda
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-6">
+                    {/* School Photo Live Preview with Gedung Terpadu overlay */}
+                    <div className="relative w-full sm:w-64 h-40 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 shadow-sm">
+                      <img
+                        src={profileForm.campusImageUrl || '/src/assets/images/hero_smpn14_building_1792594018035.jpg'}
+                        alt="Pratinjau Foto Sekolah Gedung Terpadu"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/20 to-transparent flex flex-col justify-end p-3 text-white pointer-events-none">
+                        <span className="text-[10px] font-semibold text-amber-300 uppercase tracking-wider">
+                          Pratinjau Tampilan Beranda
+                        </span>
+                        <p className="text-xs font-bold leading-snug truncate">
+                          {profileForm.campusTitle || 'Gedung Terpadu SMPN 14 Tubaba'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 flex-1 text-center sm:text-left">
+                      <p className="text-xs font-semibold text-slate-800">
+                        Ganti Foto Bangunan / Gedung Sekolah SMPN 14 Tulang Bawang Barat
+                      </p>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                        Foto yang Anda unggah di sini akan langsung menggantikan foto default dengan keterangan{' '}
+                        <strong className="text-slate-700">&ldquo;Gedung Terpadu&rdquo;</strong> pada halaman utama (Beranda) secara realtime.
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-1 justify-center sm:justify-start">
+                        <label
+                          htmlFor="campus-photo-input"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-amber-300" />
+                          <span>{profileForm.campusImageUrl ? 'Ganti Foto Sekolah' : 'Upload Foto Sekolah'}</span>
+                        </label>
+                        <input
+                          ref={campusImageInputRef}
+                          type="file"
+                          id="campus-photo-input"
+                          accept="image/*"
+                          onChange={handleCampusImageUpload}
+                          className="hidden"
+                        />
+
+                        {profileForm.campusImageUrl && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const nextForm = { ...profileForm, campusImageUrl: '' };
+                              setProfileForm(nextForm);
+                              if (campusImageInputRef.current) campusImageInputRef.current.value = '';
+                              const cleanMissions = nextForm.missions.map((m) => m.trim()).filter(Boolean);
+                              await updateSchoolInfo({
+                                ...schoolInfo,
+                                ...nextForm,
+                                missions: cleanMissions.length > 0 ? cleanMissions : schoolInfo.missions
+                              });
+                              showSuccess('Foto sekolah dikembalikan ke foto Gedung Terpadu bawaan!');
+                            }}
+                            className="px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                          >
+                            Kembalikan Foto Bawaan
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-xs">
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">
+                        Keterangan Judul Foto (Pengganti &ldquo;Gedung Terpadu&rdquo;)
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.campusTitle}
+                        onChange={(e) => setProfileForm({ ...profileForm, campusTitle: e.target.value })}
+                        placeholder="Gedung Terpadu SMPN 14 Tubaba"
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">
+                        Keterangan Deskripsi Singkat Sekolah
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.campusDescription}
+                        onChange={(e) => setProfileForm({ ...profileForm, campusDescription: e.target.value })}
+                        placeholder="Dilengkapi ruang belajar sejuk, laboratorium sains terpadu..."
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const cleanMissions = profileForm.missions.map((m) => m.trim()).filter(Boolean);
+                        await updateSchoolInfo({
+                          ...schoolInfo,
+                          ...profileForm,
+                          missions: cleanMissions.length > 0 ? cleanMissions : schoolInfo.missions
+                        });
+                        showSuccess('Foto Sekolah & keterangan Gedung Terpadu berhasil disimpan ke Beranda!');
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer"
+                    >
+                      <Save className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Simpan Foto &amp; Keterangan Sekolah</span>
+                    </button>
                   </div>
                 </div>
 
@@ -1223,7 +1474,220 @@ export const AdminPanel: React.FC = () => {
                     className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
                   >
                     <Save className="w-4 h-4 text-amber-300" />
-                    <span>Simpan Perubahan Profil &amp; Logo</span>
+                    <span>Simpan Perubahan Profil, Logo &amp; Foto Kampus</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* TAB: SAMBUTAN KEPALA SEKOLAH, FOTO KEPSEK & VISI MISI */}
+            {activeTab === 'sambutan-visi' && (
+              <form onSubmit={handleSaveSambutanVisi} className="max-w-3xl space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-slate-200 pb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Sambutan Kepala Sekolah, Foto &amp; Visi Misi</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Unggah foto resmi Kepala Sekolah, ubah kata sambutan, serta kelola Visi dan Misi sekolah yang tampil di website.
+                  </p>
+                </div>
+
+                {/* Card 1: Foto & Identitas Kepala Sekolah */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" />
+                    <span>Foto &amp; Profil Kepala Sekolah</span>
+                  </h4>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-6">
+                    {/* Foto Kepala Sekolah Preview */}
+                    <div className="w-32 h-36 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+                      {profileForm.headmasterPhotoUrl ? (
+                        <img
+                          src={profileForm.headmasterPhotoUrl}
+                          alt="Foto Kepala Sekolah"
+                          className="w-full h-full object-cover object-top"
+                        />
+                      ) : (
+                        <div className="text-center text-slate-400 p-2">
+                          <GraduationCap className="w-8 h-8 mx-auto mb-1 opacity-50" />
+                          <span className="text-[10px] block">Belum ada foto</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-2 text-center sm:text-left">
+                      <p className="text-xs font-semibold text-slate-800">
+                        Unggah Foto Resmi Kepala Sekolah
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        Format JPG, PNG, atau WebP. Foto potret akan otomatis disesuaikan dan tampil pada bagian Sambutan Kepala Sekolah.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 pt-1 justify-center sm:justify-start">
+                        <label
+                          htmlFor="headmaster-photo-input"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-amber-300" />
+                          <span>{profileForm.headmasterPhotoUrl ? 'Ganti Foto Kepala Sekolah' : 'Unggah Foto Kepala Sekolah'}</span>
+                        </label>
+                        <input
+                          ref={headmasterPhotoInputRef}
+                          type="file"
+                          id="headmaster-photo-input"
+                          accept="image/*"
+                          onChange={handleHeadmasterPhotoUpload}
+                          className="hidden"
+                        />
+
+                        {profileForm.headmasterPhotoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProfileForm((prev) => ({ ...prev, headmasterPhotoUrl: '' }));
+                              if (headmasterPhotoInputRef.current) headmasterPhotoInputRef.current.value = '';
+                              showSuccess('Foto Kepala Sekolah dihapus. Kembali ke tampilan inisial.');
+                            }}
+                            className="px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                          >
+                            Hapus Foto
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100 text-xs">
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Nama Kepala Sekolah</label>
+                      <input
+                        type="text"
+                        required
+                        value={profileForm.headmaster}
+                        onChange={(e) => setProfileForm({ ...profileForm, headmaster: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">NIP Kepala Sekolah</label>
+                      <input
+                        type="text"
+                        value={profileForm.headmasterNip}
+                        onChange={(e) => setProfileForm({ ...profileForm, headmasterNip: e.target.value })}
+                        placeholder="19680315 199303 1 004"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Pendidikan / Gelar Akademik</label>
+                      <input
+                        type="text"
+                        value={profileForm.headmasterEducation}
+                        onChange={(e) => setProfileForm({ ...profileForm, headmasterEducation: e.target.value })}
+                        placeholder="Magister Manajemen Pendidikan (UNILA)"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="text-xs">
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Isi Kata Sambutan Kepala Sekolah *
+                    </label>
+                    <textarea
+                      rows={5}
+                      required
+                      value={profileForm.headmasterQuote}
+                      onChange={(e) => setProfileForm({ ...profileForm, headmasterQuote: e.target.value })}
+                      placeholder="Tuliskan kata sambutan resmi Kepala Sekolah..."
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 leading-relaxed focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                {/* Card 2: Visi & Misi Sekolah */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-2">
+                    <Target className="w-4 h-4" />
+                    <span>Visi &amp; Misi Sekolah</span>
+                  </h4>
+
+                  <div className="text-xs">
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Visi Sekolah *
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={profileForm.vision}
+                      onChange={(e) => setProfileForm({ ...profileForm, vision: e.target.value })}
+                      placeholder="Tuliskan rumusan visi sekolah..."
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium leading-relaxed focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                    />
+                  </div>
+
+                  <div className="space-y-3 text-xs">
+                    <div className="flex items-center justify-between">
+                      <label className="font-semibold text-slate-700 flex items-center gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Daftar Poin Misi Sekolah ({profileForm.missions.length} Poin)</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setProfileForm((prev) => ({
+                            ...prev,
+                            missions: [...prev.missions, '']
+                          }))
+                        }
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 font-semibold rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Tambah Poin Misi</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {profileForm.missions.map((misi, idx) => (
+                        <div key={idx} className="flex items-start gap-2">
+                          <span className="mt-2.5 w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-mono text-[11px] font-bold flex items-center justify-center shrink-0">
+                            {idx + 1}
+                          </span>
+                          <textarea
+                            rows={2}
+                            value={misi}
+                            onChange={(e) => {
+                              const nextMissions = [...profileForm.missions];
+                              nextMissions[idx] = e.target.value;
+                              setProfileForm({ ...profileForm, missions: nextMissions });
+                            }}
+                            placeholder={`Tuliskan poin misi ke-${idx + 1}...`}
+                            className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                          />
+                          {profileForm.missions.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextMissions = profileForm.missions.filter((_, i) => i !== idx);
+                                setProfileForm({ ...profileForm, missions: nextMissions });
+                              }}
+                              className="mt-1.5 p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              title="Hapus poin misi"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4 text-amber-300" />
+                    <span>Simpan Sambutan Kepsek &amp; Visi Misi</span>
                   </button>
                 </div>
               </form>

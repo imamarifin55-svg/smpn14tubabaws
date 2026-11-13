@@ -49,8 +49,8 @@ interface SchoolDataContextType {
   updateApplicantStatus: (regNumber: string, status: PPDBApplicant['status'], notes?: string) => Promise<void>;
   isAdminOpen: boolean;
   setIsAdminOpen: (open: boolean) => void;
-  adminInitialTab?: 'profil' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'ppdb';
-  setAdminInitialTab: (tab: 'profil' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'ppdb') => void;
+  adminInitialTab?: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'ppdb';
+  setAdminInitialTab: (tab: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'ppdb') => void;
   resetToDefault: () => Promise<void>;
   isFirebaseConnected: boolean;
   syncStatus: 'synced' | 'syncing' | 'offline';
@@ -63,7 +63,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const saved = localStorage.getItem('smpn14_school_info');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        return { ...DEFAULT_SCHOOL_INFO, ...JSON.parse(saved) };
       } catch {
         return DEFAULT_SCHOOL_INFO;
       }
@@ -132,7 +132,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   });
 
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [adminInitialTab, setAdminInitialTab] = useState<'profil' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'ppdb'>('profil');
+  const [adminInitialTab, setAdminInitialTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'ppdb'>('profil');
   const [isFirebaseConnected, setIsFirebaseConnected] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('synced');
 
@@ -168,7 +168,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       doc(db, 'school_info', 'main'),
       (snapshot) => {
         if (snapshot.exists()) {
-          const data = snapshot.data() as SchoolInfoType;
+          const data = { ...DEFAULT_SCHOOL_INFO, ...(snapshot.data() as Partial<SchoolInfoType>) };
           setSchoolInfo(data);
           localStorage.setItem('smpn14_school_info', JSON.stringify(data));
           setIsFirebaseConnected(true);
@@ -282,13 +282,26 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Update School Info
   const updateSchoolInfo = async (info: SchoolInfoType) => {
-    setSchoolInfo(info);
-    localStorage.setItem('smpn14_school_info', JSON.stringify(info));
+    const nextInfo: SchoolInfoType = {
+      ...info,
+      updatedAt: new Date().toISOString()
+    } as SchoolInfoType;
+
+    setSchoolInfo(nextInfo);
+    localStorage.setItem('smpn14_school_info', JSON.stringify(nextInfo));
     setSyncStatus('syncing');
     try {
-      await setDoc(doc(db, 'school_info', 'main'), info);
+      const payloadBytes = new Blob([JSON.stringify(nextInfo)]).size;
+      if (payloadBytes > 980000) {
+        console.warn('School info payload approaches Firestore 1MB limit:', payloadBytes);
+      }
+      await setDoc(doc(db, 'school_info', 'main'), nextInfo);
       setSyncStatus('synced');
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.toLowerCase().includes('permission') || message.toLowerCase().includes('insufficient')) {
+        handleFirestoreError(err, OperationType.WRITE, 'school_info/main');
+      }
       console.warn('Firestore updateSchoolInfo warning:', err);
       setSyncStatus('offline');
     }

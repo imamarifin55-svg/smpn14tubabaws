@@ -4,13 +4,16 @@ import { useSchoolData } from '../context/SchoolDataContext';
 
 export const SchoolProfile: React.FC = () => {
   const { schoolInfo } = useSchoolData();
-  const missions = [
-    'Menyelenggarakan proses pembelajaran berbasis Kurikulum Merdeka yang kontekstual, adaptif terhadap perkembangan teknologi digital.',
-    'Menumbuhkembangkan keimanan, ketakwaan, serta pembiasaan ibadah rutin dan penguatan budi pekerti luhur bagi seluruh warga sekolah.',
-    'Mengembangkan bakat, minat, dan potensi peserta didik di bidang sains, riset terapan, olahraga, serta seni budaya tradisional Lampung.',
-    'Menanamkan nilai-nilai karakter luhur Nenemo (Nemen, Nedes, Nerimo) dan kebersamaan Ragem Sai Mangi Wawai dalam interaksi sehari-hari.',
-    'Mewujudkan lingkungan sekolah yang bersih, rindang, asri, sehat (Adiwiyata), serta ramah anak dan bebas perundungan.'
-  ];
+  const missions =
+    schoolInfo.missions && schoolInfo.missions.length > 0
+      ? schoolInfo.missions
+      : [
+          'Menyelenggarakan proses pembelajaran berbasis Kurikulum Merdeka yang kontekstual, adaptif terhadap perkembangan teknologi digital.',
+          'Menumbuhkembangkan keimanan, ketakwaan, serta pembiasaan ibadah rutin dan penguatan budi pekerti luhur bagi seluruh warga sekolah.',
+          'Mengembangkan bakat, minat, dan potensi peserta didik di bidang sains, riset terapan, olahraga, serta seni budaya tradisional Lampung.',
+          'Menanamkan nilai-nilai karakter luhur Nenemo (Nemen, Nedes, Nerimo) dan kebersamaan Ragem Sai Mangi Wawai dalam interaksi sehari-hari.',
+          'Mewujudkan lingkungan sekolah yang bersih, rindang, asri, sehat (Adiwiyata), serta ramah anak dan bebas perundungan.'
+        ];
 
   const nenemoValues = [
     {
@@ -54,27 +57,40 @@ export const SchoolProfile: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             {/* Foto / Badge Kepala Sekolah */}
             <div className="lg:col-span-4 flex flex-col items-center text-center">
-              <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl bg-gradient-to-br from-blue-900 to-indigo-950 p-1 shadow-md">
-                <div className="w-full h-full rounded-[14px] bg-slate-900 flex flex-col items-center justify-center text-white relative overflow-hidden">
-                  <div className="absolute inset-0 bg-blue-800/20 mix-blend-overlay"></div>
-                  <div className="w-20 h-20 rounded-full bg-blue-800 flex items-center justify-center text-amber-300 text-3xl font-bold font-mono">
-                    {schoolInfo.headmaster
-                      ? schoolInfo.headmaster
-                          .split(' ')
-                          .filter((w) => !w.includes('.') && !w.includes(','))
-                          .map((w) => w[0])
-                          .slice(0, 2)
-                          .join('') || 'KS'
-                      : 'KS'}
-                  </div>
-                  <span className="text-xs font-medium text-slate-300 mt-3">Kepala Sekolah</span>
-                  <span className="text-xs text-amber-400 font-semibold">{schoolInfo.shortName || schoolInfo.name}</span>
+              {schoolInfo.headmasterPhotoUrl ? (
+                <div className="w-44 h-52 sm:w-52 sm:h-60 rounded-2xl overflow-hidden shadow-md border border-slate-200 bg-white">
+                  <img
+                    src={schoolInfo.headmasterPhotoUrl}
+                    alt={`Foto ${schoolInfo.headmaster}`}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover object-top"
+                  />
                 </div>
-              </div>
+              ) : (
+                <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl bg-gradient-to-br from-blue-900 to-indigo-950 p-1 shadow-md">
+                  <div className="w-full h-full rounded-[14px] bg-slate-900 flex flex-col items-center justify-center text-white relative overflow-hidden">
+                    <div className="absolute inset-0 bg-blue-800/20 mix-blend-overlay"></div>
+                    <div className="w-20 h-20 rounded-full bg-blue-800 flex items-center justify-center text-amber-300 text-3xl font-bold font-mono">
+                      {schoolInfo.headmaster
+                        ? schoolInfo.headmaster
+                            .split(' ')
+                            .filter((w) => !w.includes('.') && !w.includes(','))
+                            .map((w) => w[0])
+                            .slice(0, 2)
+                            .join('') || 'KS'
+                        : 'KS'}
+                    </div>
+                    <span className="text-xs font-medium text-slate-300 mt-3">Kepala Sekolah</span>
+                    <span className="text-xs text-amber-400 font-semibold">{schoolInfo.shortName || schoolInfo.name}</span>
+                  </div>
+                </div>
+              )}
               <h3 className="mt-4 text-lg font-bold text-slate-900">{schoolInfo.headmaster}</h3>
-              <p className="text-xs text-slate-500 font-mono">Kepala {schoolInfo.shortName || schoolInfo.name}</p>
-              <span className="mt-2 text-xs text-blue-900 font-medium">
-                Pendidikan Berkualitas &amp; Berkarakter
+              {schoolInfo.headmasterNip && (
+                <p className="text-xs text-slate-500 font-mono">NIP. {schoolInfo.headmasterNip}</p>
+              )}
+              <span className="mt-1.5 text-xs text-blue-900 font-medium">
+                {schoolInfo.headmasterEducation || `Kepala ${schoolInfo.shortName || schoolInfo.name}`}
               </span>
             </div>
 
@@ -87,12 +103,9 @@ export const SchoolProfile: React.FC = () => {
                 </span>
               </div>
               
-              <blockquote className="text-base sm:text-lg text-slate-800 leading-relaxed font-normal">
-                &ldquo;Pendidikan sejati bukan sekadar mentransfer pengetahuan akademik dari buku ke lembar ujian, melainkan 
-                menyalakan lentera budi pekerti, menumbuhkan rasa ingin tahu ilmiah, dan membentuk pribadi yang tangguh menghadapi peradaban abad 21. 
-                Di {schoolInfo.name}, kami merajut keunggulan sains terapan dengan nilai luhur {schoolInfo.mottoValues || 'Nenemo (Nemen, Nedes, Nerimo)'}: 
-                bekerja keras (nemen), ulet dan tahan uji (nedes), serta senantiasa ikhlas dan berakhlak mulia (nerimo). 
-                Mari bersama kita hantarkan anak-anak kita menjadi tunas bangsa yang berkarakter, berbudaya, dan berprestasi.&rdquo;
+              <blockquote className="text-base sm:text-lg text-slate-800 leading-relaxed font-normal space-y-3 whitespace-pre-line">
+                &ldquo;{schoolInfo.headmasterQuote ||
+                  `Pendidikan sejati bukan sekadar mentransfer pengetahuan akademik dari buku ke lembar ujian, melainkan menyalakan lentera budi pekerti, menumbuhkan rasa ingin tahu ilmiah, dan membentuk pribadi yang tangguh menghadapi peradaban abad 21. Di ${schoolInfo.name}, kami merajut keunggulan sains terapan dengan nilai luhur ${schoolInfo.mottoValues || 'Nenemo (Nemen, Nedes, Nerimo)'}. Mari bersama kita hantarkan anak-anak kita menjadi tunas bangsa yang berkarakter, berbudaya, dan berprestasi.`}&rdquo;
               </blockquote>
 
               <div className="mt-6 pt-6 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
@@ -118,9 +131,9 @@ export const SchoolProfile: React.FC = () => {
                   <p className="text-xs text-slate-500">Landasan Arah &amp; Cita-cita Pendidikan</p>
                 </div>
               </div>
-              <p className="text-base sm:text-lg font-medium text-slate-800 leading-relaxed bg-blue-50/60 p-5 rounded-xl border border-blue-100/80">
-                &ldquo;Terwujudnya Peserta Didik yang Beriman dan Bertakwa, Unggul dalam Prestasi Akademik dan Non-Akademik, 
-                Berwawasan Lingkungan, serta Berakar pada Budaya Luhur Nenemo.&rdquo;
+              <p className="text-base sm:text-lg font-medium text-slate-800 leading-relaxed bg-blue-50/60 p-5 rounded-xl border border-blue-100/80 whitespace-pre-line">
+                &ldquo;{schoolInfo.vision ||
+                  'Terwujudnya Peserta Didik yang Beriman dan Bertakwa, Unggul dalam Prestasi Akademik dan Non-Akademik, Berwawasan Lingkungan, serta Berakar pada Budaya Luhur Nenemo.'}&rdquo;
               </p>
             </div>
 

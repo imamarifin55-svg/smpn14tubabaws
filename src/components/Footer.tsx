@@ -35,16 +35,17 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 pb-12 border-b border-slate-800">
           {/* Col 1: Identity & Motto (4 cols) */}
           <div className="lg:col-span-4 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-900 text-amber-400 flex items-center justify-center font-bold overflow-hidden">
+            <div className="flex items-center gap-3.5">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shrink-0 overflow-hidden bg-transparent">
                 {schoolInfo.logoUrl ? (
                   <img
                     src={schoolInfo.logoUrl}
                     alt={schoolInfo.name}
-                    className="w-full h-full object-contain p-1"
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-contain"
                   />
                 ) : (
-                  <GraduationCap className="w-6 h-6" />
+                  <GraduationCap className="w-10 h-10 text-amber-400" />
                 )}
               </div>
               <div>
@@ -59,7 +60,7 @@ export const Footer: React.FC = () => {
 
             <p className="text-xs text-slate-400 leading-relaxed">
               Mendidik generasi cerdas, berkarakter, berbudaya lokal, dan bertakwa kepada Tuhan Yang Maha Esa. 
-              Mengimplementasikan nilai <em>Nenemo</em> (Nemen, Nedes, Nerimo) dan falsafah <em>Ragem Sai Mangi Wawai</em>.
+              Mengimplementasikan nilai <em>{schoolInfo.mottoValues || 'Nenemo (Nemen, Nedes, Nerimo)'}</em> dan falsafah <em>{schoolInfo.mottoLocal || 'Ragem Sai Mangi Wawai'}</em>.
             </p>
 
             <div className="pt-2 text-xs text-slate-400 space-y-1">
@@ -179,7 +180,7 @@ export const Footer: React.FC = () => {
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div>
-            &copy; 2026 SMP Negeri 14 Tulang Bawang Barat. Hak Cipta Dilindungi Undang-Undang.
+            &copy; 2026 {schoolInfo.name}. Hak Cipta Dilindungi Undang-Undang.
           </div>
           <div className="flex items-center gap-4">
             <button

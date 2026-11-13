@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Sparkles, MapPin, Clock, ShieldCheck, GraduationCap, Award } from 'lucide-react';
+import { ArrowRight, Sparkles, MapPin, Clock, ShieldCheck, GraduationCap, Award, Camera } from 'lucide-react';
 import { useSchoolData } from '../context/SchoolDataContext';
 
 interface HeroProps {
@@ -8,7 +8,7 @@ interface HeroProps {
 }
 
 export const Hero: React.FC<HeroProps> = ({ onOpenPPDB, onNavigate }) => {
-  const { schoolInfo } = useSchoolData();
+  const { schoolInfo, setAdminInitialTab, setIsAdminOpen } = useSchoolData();
   return (
     <section id="beranda" className="relative bg-white pt-8 pb-16 lg:pt-14 lg:pb-20 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -84,23 +84,37 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPPDB, onNavigate }) => {
           <div className="lg:col-span-5 relative flex items-center">
             <div className="relative w-full rounded-2xl overflow-hidden shadow-xl ring-1 ring-slate-900/10 group">
               <img
-                src="/src/assets/images/hero_smpn14_building_1792594018035.jpg"
-                alt="Kampus SMP Negeri 14 Tulang Bawang Barat"
+                src={schoolInfo.campusImageUrl || '/src/assets/images/hero_smpn14_building_1792594018035.jpg'}
+                alt={`Kampus ${schoolInfo.name}`}
                 referrerPolicy="no-referrer"
                 className="w-full h-80 sm:h-96 lg:h-[460px] object-cover object-center group-hover:scale-[1.02] transition-transform duration-500"
               />
+
+              {/* Subtle Admin Quick Action to replace school building photo */}
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminInitialTab('profil');
+                  setIsAdminOpen(true);
+                }}
+                title="Unggah foto sekolah baru untuk mengganti foto Gedung Terpadu"
+                className="absolute top-3.5 right-3.5 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950/65 hover:bg-blue-900/90 text-white text-xs font-medium backdrop-blur-xs border border-white/15 shadow-sm transition-colors cursor-pointer"
+              >
+                <Camera className="w-3.5 h-3.5 text-amber-300" />
+                <span>Ganti Foto Sekolah</span>
+              </button>
               
               {/* Measured contrast scrim overlay for typography legibility */}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/20 to-transparent flex flex-col justify-end p-6 sm:p-7 text-white">
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/20 to-transparent flex flex-col justify-end p-6 sm:p-7 text-white pointer-events-none">
                 <div className="flex items-center gap-2 text-xs font-semibold text-amber-300 uppercase tracking-wider mb-1">
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Kampus Asri &amp; Modern</span>
                 </div>
                 <h3 className="text-xl font-bold leading-snug">
-                  Gedung Terpadu SMPN 14 Tubaba
+                  {schoolInfo.campusTitle || `Gedung Terpadu ${schoolInfo.shortName || schoolInfo.name}`}
                 </h3>
                 <p className="text-xs text-slate-200 mt-1 line-clamp-2">
-                  Dilengkapi ruang belajar sejuk, laboratorium sains terpadu, perpustakaan digital, serta lapangan serbaguna.
+                  {schoolInfo.campusDescription || 'Dilengkapi ruang belajar sejuk, laboratorium sains terpadu, perpustakaan digital, serta lapangan serbaguna.'}
                 </p>
               </div>
             </div>
@@ -114,8 +128,8 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPPDB, onNavigate }) => {
               <Clock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
               <div>
                 <span className="block text-xs uppercase tracking-wider text-slate-400 font-semibold">Jam Pelajaran</span>
-                <span className="font-semibold text-slate-100">07.15 - 15.00 WIB</span>
-                <span className="block text-xs text-slate-400 mt-0.5">Senin s.d. Jumat</span>
+                <span className="font-semibold text-slate-100">{schoolInfo.workingHours || 'Senin - Jumat: 07.15 - 15.00 WIB'}</span>
+                <span className="block text-xs text-slate-400 mt-0.5">Hari Aktif Sekolah</span>
               </div>
             </div>
 
@@ -132,8 +146,8 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPPDB, onNavigate }) => {
               <Award className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
               <div>
                 <span className="block text-xs uppercase tracking-wider text-slate-400 font-semibold">Falsafah Budaya</span>
-                <span className="font-semibold text-slate-100">Nenemo &amp; Ragem Sai Mangi Wawai</span>
-                <span className="block text-xs text-slate-400 mt-0.5">Nemen, Nedes, Nerimo</span>
+                <span className="font-semibold text-slate-100">{schoolInfo.mottoLocal || 'Ragem Sai Mangi Wawai'}</span>
+                <span className="block text-xs text-slate-400 mt-0.5">{schoolInfo.mottoValues || 'Nenemo (Nemen, Nedes, Nerimo)'}</span>
               </div>
             </div>
 

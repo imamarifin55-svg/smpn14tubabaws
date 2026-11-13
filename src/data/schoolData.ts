@@ -232,6 +232,20 @@ export const SCHOOL_INFO = {
   accreditation: 'Akreditasi B',
   decreeNumber: '420/188/II.01/TUBABA/2016',
   headmaster: 'Drs. H. Sukamto, M.Pd.',
+  headmasterNip: '19680315 199303 1 004',
+  headmasterEducation: 'Magister Manajemen Pendidikan (UNILA)',
+  headmasterPhotoUrl: '',
+  headmasterQuote:
+    'Pendidikan sejati bukan sekadar mentransfer pengetahuan akademik dari buku ke lembar ujian, melainkan menyalakan lentera budi pekerti, menumbuhkan rasa ingin tahu ilmiah, dan membentuk pribadi yang tangguh menghadapi peradaban abad 21. Di SMP Negeri 14 Tulang Bawang Barat, kami merajut keunggulan sains terapan dengan nilai luhur Nenemo: bekerja keras (nemen), ulet dan tahan uji (nedes), serta senantiasa ikhlas dan berakhlak mulia (nerimo). Mari bersama kita hantarkan anak-anak kita menjadi tunas bangsa yang berkarakter, berbudaya, dan berprestasi.',
+  vision:
+    'Terwujudnya Peserta Didik yang Beriman dan Bertakwa, Unggul dalam Prestasi Akademik dan Non-Akademik, Berwawasan Lingkungan, serta Berakar pada Budaya Luhur Nenemo.',
+  missions: [
+    'Menyelenggarakan proses pembelajaran berbasis Kurikulum Merdeka yang kontekstual, adaptif terhadap perkembangan teknologi digital.',
+    'Menumbuhkembangkan keimanan, ketakwaan, serta pembiasaan ibadah rutin dan penguatan budi pekerti luhur bagi seluruh warga sekolah.',
+    'Mengembangkan bakat, minat, dan potensi peserta didik di bidang sains, riset terapan, olahraga, serta seni budaya tradisional Lampung.',
+    'Menanamkan nilai-nilai karakter luhur Nenemo (Nemen, Nedes, Nerimo) dan kebersamaan Ragem Sai Mangi Wawai dalam interaksi sehari-hari.',
+    'Mewujudkan lingkungan sekolah yang bersih, rindang, asri, sehat (Adiwiyata), serta ramah anak dan bebas perundungan.'
+  ],
   mottoLocal: 'Ragem Sai Mangi Wawai',
   mottoValues: 'Nenemo (Nemen, Nedes, Nerimo)',
   address: 'Kawasan Pendidikan Terpadu, Kec. Tulang Bawang Barat, Kab. Tulang Bawang Barat, Provinsi Lampung 34693',
@@ -240,6 +254,9 @@ export const SCHOOL_INFO = {
   email: 'smpn14tubaba@gmail.com',
   workingHours: 'Senin - Jumat: 07.15 - 15.00 WIB',
   logoUrl: '', // Base64 or image URL uploaded by school admin
+  campusImageUrl: '', // Uploaded photo of SMPN 14 Tulang Bawang Barat campus
+  campusTitle: 'Gedung Terpadu SMPN 14 Tubaba',
+  campusDescription: 'Dilengkapi ruang belajar sejuk, laboratorium sains terpadu, perpustakaan digital, serta lapangan serbaguna.',
   stats: [
     { label: 'Peserta Didik Aktif', value: '486', unit: 'Siswa' },
     { label: 'Tenaga Pendidik & Staf', value: '32', unit: 'Guru & Tendik' },
