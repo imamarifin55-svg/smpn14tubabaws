@@ -125,7 +125,12 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a href="#galeri" className="text-slate-400 hover:text-white transition-colors">
-                  Galeri Kegiatan
+                  Galeri Foto
+                </a>
+              </li>
+              <li>
+                <a href="#kegiatan-pagi" className="text-slate-400 hover:text-white transition-colors">
+                  Kegiatan Pagi
                 </a>
               </li>
               <li>

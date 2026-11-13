@@ -63,6 +63,12 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // Morning Activities (Kegiatan Pagi)
+    match /kegiatan_pagi/{activityId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // PPDB Applicants
     match /ppdb_applicants/{applicantId} {
       allow read: if true;

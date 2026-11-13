@@ -16,11 +16,13 @@ import {
   ANNOUNCEMENTS,
   INITIAL_APPLICANTS,
   INITIAL_STUDENTS,
+  INITIAL_MORNING_ACTIVITIES,
   Teacher,
   ActivityPhoto,
   Announcement,
   PPDBApplicant,
-  Student
+  Student,
+  MorningActivity
 } from '../data/schoolData';
 
 export type SchoolInfoType = typeof DEFAULT_SCHOOL_INFO;
@@ -41,6 +43,10 @@ interface SchoolDataContextType {
   activities: ActivityPhoto[];
   addActivity: (activity: ActivityPhoto) => Promise<void>;
   deleteActivity: (id: string) => Promise<void>;
+  morningActivities: MorningActivity[];
+  addMorningActivity: (item: MorningActivity) => Promise<void>;
+  updateMorningActivity: (id: string, updated: Partial<MorningActivity>) => Promise<void>;
+  deleteMorningActivity: (id: string) => Promise<void>;
   announcements: Announcement[];
   addAnnouncement: (announcement: Announcement) => Promise<void>;
   deleteAnnouncement: (id: string) => Promise<void>;
@@ -49,8 +55,8 @@ interface SchoolDataContextType {
   updateApplicantStatus: (regNumber: string, status: PPDBApplicant['status'], notes?: string) => Promise<void>;
   isAdminOpen: boolean;
   setIsAdminOpen: (open: boolean) => void;
-  adminInitialTab?: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'ppdb';
-  setAdminInitialTab: (tab: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'ppdb') => void;
+  adminInitialTab?: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb';
+  setAdminInitialTab: (tab: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb') => void;
   resetToDefault: () => Promise<void>;
   isFirebaseConnected: boolean;
   syncStatus: 'synced' | 'syncing' | 'offline';
@@ -131,8 +137,20 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return INITIAL_STUDENTS;
   });
 
+  const [morningActivities, setMorningActivities] = useState<MorningActivity[]>(() => {
+    const saved = localStorage.getItem('smpn14_morning_activities');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return INITIAL_MORNING_ACTIVITIES;
+      }
+    }
+    return INITIAL_MORNING_ACTIVITIES;
+  });
+
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [adminInitialTab, setAdminInitialTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'ppdb'>('profil');
+  const [adminInitialTab, setAdminInitialTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb'>('profil');
   const [isFirebaseConnected, setIsFirebaseConnected] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('synced');
 
@@ -152,6 +170,10 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     localStorage.setItem('smpn14_activities', JSON.stringify(activities));
   }, [activities]);
+
+  useEffect(() => {
+    localStorage.setItem('smpn14_morning_activities', JSON.stringify(morningActivities));
+  }, [morningActivities]);
 
   useEffect(() => {
     localStorage.setItem('smpn14_announcements', JSON.stringify(announcements));
@@ -270,6 +292,24 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
     );
 
+    // 7. Morning Activities (Kegiatan Pagi) Listener
+    const unsubMorningActivities = onSnapshot(
+      collection(db, 'kegiatan_pagi'),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: MorningActivity[] = [];
+          snapshot.forEach((d) => list.push(d.data() as MorningActivity));
+          setMorningActivities(list);
+          localStorage.setItem('smpn14_morning_activities', JSON.stringify(list));
+          setIsFirebaseConnected(true);
+        }
+      },
+      (error) => {
+        console.warn('Morning activities onSnapshot warning:', error);
+        setIsFirebaseConnected(false);
+      }
+    );
+
     return () => {
       unsubSchoolInfo();
       unsubTeachers();
@@ -277,6 +317,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       unsubAnnouncements();
       unsubActivities();
       unsubApplicants();
+      unsubMorningActivities();
     };
   }, []);
 
@@ -414,6 +455,55 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setSyncStatus('synced');
     } catch (err) {
       console.warn('Firestore deleteActivity warning:', err);
+      setSyncStatus('offline');
+    }
+  };
+
+  // Morning Activities (Kegiatan Pagi) CRUD
+  const addMorningActivity = async (item: MorningActivity) => {
+    setMorningActivities((prev) => {
+      const updated = [item, ...prev.filter((m) => m.id !== item.id)];
+      localStorage.setItem('smpn14_morning_activities', JSON.stringify(updated));
+      return updated;
+    });
+    setSyncStatus('syncing');
+    try {
+      await setDoc(doc(db, 'kegiatan_pagi', item.id), item);
+      setSyncStatus('synced');
+    } catch (err) {
+      console.warn('Firestore addMorningActivity warning:', err);
+      setSyncStatus('offline');
+    }
+  };
+
+  const updateMorningActivity = async (id: string, updated: Partial<MorningActivity>) => {
+    setMorningActivities((prev) => {
+      const newList = prev.map((m) => (m.id === id ? { ...m, ...updated } : m));
+      localStorage.setItem('smpn14_morning_activities', JSON.stringify(newList));
+      return newList;
+    });
+    setSyncStatus('syncing');
+    try {
+      await updateDoc(doc(db, 'kegiatan_pagi', id), updated);
+      setSyncStatus('synced');
+    } catch (err) {
+      console.warn('Firestore updateMorningActivity warning:', err);
+      setSyncStatus('offline');
+    }
+  };
+
+  const deleteMorningActivity = async (id: string) => {
+    setMorningActivities((prev) => {
+      const filtered = prev.filter((m) => m.id !== id);
+      localStorage.setItem('smpn14_morning_activities', JSON.stringify(filtered));
+      return filtered;
+    });
+    setSyncStatus('syncing');
+    try {
+      await deleteDoc(doc(db, 'kegiatan_pagi', id));
+      setSyncStatus('synced');
+    } catch (err) {
+      console.warn('Firestore deleteMorningActivity warning:', err);
       setSyncStatus('offline');
     }
   };
@@ -579,6 +669,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setTeachers(INITIAL_TEACHERS);
     setStudents(INITIAL_STUDENTS);
     setActivities(SCHOOL_ACTIVITIES);
+    setMorningActivities(INITIAL_MORNING_ACTIVITIES);
     setAnnouncements(ANNOUNCEMENTS);
     setApplicants(INITIAL_APPLICANTS);
     setSyncStatus('syncing');
@@ -590,6 +681,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       INITIAL_STUDENTS.forEach((s) => batch.set(doc(db, 'students', s.id), s));
       ANNOUNCEMENTS.forEach((a) => batch.set(doc(db, 'announcements', a.id), a));
       SCHOOL_ACTIVITIES.forEach((ac) => batch.set(doc(db, 'activities', ac.id), ac));
+      INITIAL_MORNING_ACTIVITIES.forEach((ma) => batch.set(doc(db, 'kegiatan_pagi', ma.id), ma));
       INITIAL_APPLICANTS.forEach((ap) => batch.set(doc(db, 'ppdb_applicants', ap.registrationNumber), ap));
       await batch.commit();
       setSyncStatus('synced');
@@ -617,6 +709,10 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         activities,
         addActivity,
         deleteActivity,
+        morningActivities,
+        addMorningActivity,
+        updateMorningActivity,
+        deleteMorningActivity,
         announcements,
         addAnnouncement,
         deleteAnnouncement,

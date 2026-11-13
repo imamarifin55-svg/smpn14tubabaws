@@ -31,10 +31,11 @@ import {
   Building2,
   Target,
   Quote,
-  BookOpen
+  BookOpen,
+  Sun
 } from 'lucide-react';
 import { useSchoolData } from '../context/SchoolDataContext';
-import { Teacher, ActivityPhoto, Announcement, Student } from '../data/schoolData';
+import { Teacher, ActivityPhoto, Announcement, Student, MorningActivity } from '../data/schoolData';
 import { compressImage } from '../utils/imageCompressor';
 
 export const AdminPanel: React.FC = () => {
@@ -57,6 +58,10 @@ export const AdminPanel: React.FC = () => {
     activities,
     addActivity,
     deleteActivity,
+    morningActivities,
+    addMorningActivity,
+    updateMorningActivity,
+    deleteMorningActivity,
     applicants,
     updateApplicantStatus,
     isAdminOpen,
@@ -67,7 +72,7 @@ export const AdminPanel: React.FC = () => {
     syncStatus
   } = useSchoolData();
 
-  const [activeTab, setActiveTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'ppdb'>('profil');
+  const [activeTab, setActiveTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb'>('profil');
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
@@ -75,6 +80,7 @@ export const AdminPanel: React.FC = () => {
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [editingMorning, setEditingMorning] = useState<MorningActivity | null>(null);
 
   useEffect(() => {
     if (adminInitialTab) {
@@ -210,6 +216,18 @@ export const AdminPanel: React.FC = () => {
     image: ''
   });
   const activityImageInputRef = useRef<HTMLInputElement>(null);
+
+  // Form states for New Morning Activity (Kegiatan Pagi)
+  const [newMorning, setNewMorning] = useState({
+    day: 'Setiap Pagi' as MorningActivity['day'],
+    time: '07.00 – 07.30 WIB',
+    title: '',
+    coordinator: 'Tim Guru Piket & Pembina OSIS',
+    location: 'Lapangan Utama SMPN 14',
+    description: '',
+    imageUrl: ''
+  });
+  const morningImageInputRef = useRef<HTMLInputElement>(null);
 
   if (!isAdminOpen) return null;
 
@@ -858,6 +876,59 @@ export const AdminPanel: React.FC = () => {
     showSuccess('Dokumentasi foto kegiatan baru berhasil ditambahkan ke galeri!');
   };
 
+  // 6. Morning Activity (Kegiatan Pagi) Add & Photo Upload
+  const handleMorningImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Mohon pilih file foto gambar (JPG, PNG, WebP).');
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      const base64 = await compressImage(file, 960, 720, 0.8, 200000);
+      setNewMorning((prev) => ({ ...prev, imageUrl: base64 }));
+      showSuccess(`Foto kegiatan pagi ${file.name} siap ditambahkan!`);
+    } catch {
+      alert('Gagal memproses foto kegiatan pagi.');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleAddMorningActivity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMorning.title.trim()) return;
+
+    const item: MorningActivity = {
+      id: 'pagi-' + Date.now(),
+      day: newMorning.day,
+      time: newMorning.time || '07.00 – 07.30 WIB',
+      title: newMorning.title.trim(),
+      coordinator: newMorning.coordinator.trim() || 'Tim Guru Piket',
+      location: newMorning.location.trim() || 'Lingkungan SMPN 14 Tubaba',
+      description: newMorning.description.trim() || newMorning.title.trim(),
+      imageUrl: newMorning.imageUrl || '/src/assets/images/activity_ceremony_1792594019651.jpg'
+    };
+
+    await addMorningActivity(item);
+    setNewMorning({
+      day: 'Setiap Pagi',
+      time: '07.00 – 07.30 WIB',
+      title: '',
+      coordinator: 'Tim Guru Piket & Pembina OSIS',
+      location: 'Lapangan Utama SMPN 14',
+      description: '',
+      imageUrl: ''
+    });
+    if (morningImageInputRef.current) {
+      morningImageInputRef.current.value = '';
+    }
+    showSuccess('Program Kegiatan Pagi baru berhasil ditambahkan & disinkronkan!');
+  };
+
   // Filtered students inside admin table
   const filteredAdminStudents = students.filter((s) => {
     const matchSearch =
@@ -1018,6 +1089,23 @@ export const AdminPanel: React.FC = () => {
                 </div>
                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
                   {activities.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('kegiatan-pagi')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
+                  activeTab === 'kegiatan-pagi'
+                    ? 'bg-blue-900 text-white shadow-xs font-bold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <Sun className="w-4 h-4 shrink-0 text-amber-400" />
+                  <span className="truncate">Kegiatan Pagi</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
+                  {morningActivities.length}
                 </span>
               </button>
 
@@ -2618,6 +2706,7 @@ export const AdminPanel: React.FC = () => {
                         onChange={(e) => {
                           const cat = e.target.value as ActivityPhoto['category'];
                           const labels: Record<string, string> = {
+                            'kegiatan-pagi': 'Kegiatan Pagi',
                             osis: 'OSIS & Kepemimpinan',
                             upacara: 'Upacara & Nasionalisme',
                             pramuka: 'Kepramukaan & Karakter',
@@ -2633,6 +2722,7 @@ export const AdminPanel: React.FC = () => {
                         }}
                         className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
                       >
+                        <option value="kegiatan-pagi">Kegiatan Pagi</option>
                         <option value="osis">OSIS &amp; Kepemimpinan Siswa</option>
                         <option value="upacara">Upacara &amp; Nasionalisme</option>
                         <option value="pramuka">Kepramukaan</option>
@@ -2705,6 +2795,206 @@ export const AdminPanel: React.FC = () => {
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: KEGIATAN PAGI */}
+            {activeTab === 'kegiatan-pagi' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-slate-200 pb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Kelola Kegiatan Pagi &amp; Pembiasaan Siswa</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Tambahkan atau perbarui agenda kegiatan pagi (5S, Upacara, Literasi, Senam, Imtaq) yang tampil di submenu Kegiatan Pagi.
+                  </p>
+                </div>
+
+                <form onSubmit={handleAddMorningActivity} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                    <Sun className="w-4 h-4 text-amber-500" />
+                    <span>Tambah Program Kegiatan Pagi</span>
+                  </h4>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div className="w-32 h-24 rounded-lg bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                      {newMorning.imageUrl ? (
+                        <img src={newMorning.imageUrl} alt="Pratinjau Kegiatan Pagi" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="text-center text-slate-400 p-2">
+                          <Sun className="w-6 h-6 mx-auto mb-1 opacity-60" />
+                          <span className="text-[10px] block">Belum ada foto</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-1.5 text-center sm:text-left text-xs">
+                      <span className="font-bold text-slate-800 block">Foto Dokumentasi Kegiatan Pagi</span>
+                      <p className="text-[11px] text-slate-500">
+                        Unggah foto pembiasaan pagi siswa (JPG, PNG, WebP). Otomatis dikompresi agar cepat tampil.
+                      </p>
+                      <div className="flex items-center gap-2 pt-1 justify-center sm:justify-start">
+                        <label
+                          htmlFor="morning-photo-input"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold rounded-lg shadow-xs cursor-pointer transition-colors"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Unggah Foto Kegiatan Pagi</span>
+                        </label>
+                        <input
+                          ref={morningImageInputRef}
+                          type="file"
+                          id="morning-photo-input"
+                          accept="image/*"
+                          onChange={handleMorningImageUpload}
+                          className="hidden"
+                        />
+                        {newMorning.imageUrl && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewMorning((prev) => ({ ...prev, imageUrl: '' }));
+                              if (morningImageInputRef.current) morningImageInputRef.current.value = '';
+                            }}
+                            className="px-2.5 py-1.5 text-rose-600 hover:bg-rose-50 rounded-lg text-xs cursor-pointer"
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Hari Pelaksanaan</label>
+                      <select
+                        value={newMorning.day}
+                        onChange={(e) => setNewMorning({ ...newMorning, day: e.target.value as MorningActivity['day'] })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      >
+                        <option value="Setiap Pagi">Setiap Pagi</option>
+                        <option value="Senin">Senin</option>
+                        <option value="Selasa">Selasa</option>
+                        <option value="Rabu">Rabu</option>
+                        <option value="Kamis">Kamis</option>
+                        <option value="Jumat">Jumat</option>
+                        <option value="Sabtu">Sabtu</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Waktu Pelaksanaan *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="07.00 – 07.30 WIB"
+                        value={newMorning.time}
+                        onChange={(e) => setNewMorning({ ...newMorning, time: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="font-semibold text-slate-700 block mb-1">Nama Kegiatan Pagi *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: Apel Pagi & Pembiasaan Membaca Al-Qur'an"
+                        value={newMorning.title}
+                        onChange={(e) => setNewMorning({ ...newMorning, title: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Koordinator / Pembina</label>
+                      <input
+                        type="text"
+                        value={newMorning.coordinator}
+                        onChange={(e) => setNewMorning({ ...newMorning, coordinator: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Lokasi</label>
+                      <input
+                        type="text"
+                        value={newMorning.location}
+                        onChange={(e) => setNewMorning({ ...newMorning, location: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="font-semibold text-slate-700 block mb-1">Deskripsi Kegiatan</label>
+                      <textarea
+                        rows={2}
+                        placeholder="Jelaskan rangkaian pembiasaan pagi dan tujuan karakter bagi siswa..."
+                        value={newMorning.description}
+                        onChange={(e) => setNewMorning({ ...newMorning, description: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-blue-900 text-white font-semibold text-xs rounded-xl hover:bg-blue-800 transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Plus className="w-4 h-4 text-amber-300" />
+                      <span>Simpan ke Kegiatan Pagi</span>
+                    </button>
+                  </div>
+                </form>
+
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Daftar Program Kegiatan Pagi ({morningActivities.length})
+                  </h4>
+                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white text-xs shadow-xs">
+                    {morningActivities.map((item) => (
+                      <div key={item.id} className="p-3.5 flex items-center justify-between gap-4 hover:bg-slate-50">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {item.imageUrl ? (
+                            <img
+                              src={item.imageUrl}
+                              alt={item.title}
+                              className="w-12 h-10 object-cover rounded-lg border border-slate-200 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-12 h-10 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                              <Sun className="w-4 h-4 text-amber-600" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 line-clamp-1">{item.title}</div>
+                            <div className="text-slate-500 text-[11px] truncate">
+                              {item.day} · {item.time} · {item.coordinator}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setEditingMorning(item)}
+                            className="p-1.5 text-blue-900 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                            title="Edit kegiatan pagi"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`Hapus program "${item.title}"?`)) {
+                                deleteMorningActivity(item.id);
+                                showSuccess('Kegiatan pagi telah dihapus.');
+                              }
+                            }}
+                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                            title="Hapus kegiatan pagi"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -3044,6 +3334,157 @@ export const AdminPanel: React.FC = () => {
                   >
                     <Save className="w-3.5 h-3.5 text-amber-300" />
                     <span>Simpan Perubahan Siswa</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Edit Kegiatan Pagi */}
+        {editingMorning && (
+          <div className="fixed inset-0 z-60 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-xl p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <Sun className="w-4 h-4 text-amber-500" />
+                  <span>Edit Program Kegiatan Pagi</span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setEditingMorning(null)}
+                  className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  await updateMorningActivity(editingMorning.id, editingMorning);
+                  setEditingMorning(null);
+                  showSuccess('Perubahan kegiatan pagi berhasil disimpan!');
+                }}
+                className="space-y-3 text-xs"
+              >
+                <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <div className="w-20 h-16 rounded-lg bg-white border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                    {editingMorning.imageUrl ? (
+                      <img src={editingMorning.imageUrl} alt={editingMorning.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <Sun className="w-5 h-5 text-amber-500" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <span className="font-semibold text-slate-800 block">Foto Kegiatan Pagi</span>
+                    <label
+                      htmlFor="edit-morning-photo-input"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold rounded-lg cursor-pointer transition-colors"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Ganti Foto</span>
+                    </label>
+                    <input
+                      type="file"
+                      id="edit-morning-photo-input"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file || !file.type.startsWith('image/')) return;
+                        try {
+                          const base64 = await compressImage(file, 960, 720, 0.8, 200000);
+                          setEditingMorning((prev) => (prev ? { ...prev, imageUrl: base64 } : null));
+                        } catch {
+                          alert('Gagal memproses foto.');
+                        } finally {
+                          e.target.value = '';
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Hari</label>
+                    <select
+                      value={editingMorning.day}
+                      onChange={(e) => setEditingMorning({ ...editingMorning, day: e.target.value as MorningActivity['day'] })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    >
+                      <option value="Setiap Pagi">Setiap Pagi</option>
+                      <option value="Senin">Senin</option>
+                      <option value="Selasa">Selasa</option>
+                      <option value="Rabu">Rabu</option>
+                      <option value="Kamis">Kamis</option>
+                      <option value="Jumat">Jumat</option>
+                      <option value="Sabtu">Sabtu</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Waktu</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingMorning.time}
+                      onChange={(e) => setEditingMorning({ ...editingMorning, time: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Nama Kegiatan</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingMorning.title}
+                    onChange={(e) => setEditingMorning({ ...editingMorning, title: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Koordinator / Pembina</label>
+                    <input
+                      type="text"
+                      value={editingMorning.coordinator}
+                      onChange={(e) => setEditingMorning({ ...editingMorning, coordinator: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Lokasi</label>
+                    <input
+                      type="text"
+                      value={editingMorning.location}
+                      onChange={(e) => setEditingMorning({ ...editingMorning, location: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Deskripsi</label>
+                  <textarea
+                    rows={3}
+                    value={editingMorning.description}
+                    onChange={(e) => setEditingMorning({ ...editingMorning, description: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setEditingMorning(null)}
+                    className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Save className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Simpan Perubahan</span>
                   </button>
                 </div>
               </form>

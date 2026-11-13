@@ -11,6 +11,7 @@ export const ActivityGallery: React.FC = () => {
 
   const categories = [
     { id: 'all', label: 'Semua Kegiatan' },
+    { id: 'kegiatan-pagi', label: 'Kegiatan Pagi' },
     { id: 'osis', label: 'OSIS & Kepemimpinan' },
     { id: 'upacara', label: 'Upacara Bendera' },
     { id: 'pramuka', label: 'Kepramukaan' },

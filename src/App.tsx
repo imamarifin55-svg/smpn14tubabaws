@@ -12,6 +12,7 @@ import { SchoolProfile } from './components/SchoolProfile';
 import { TeacherDirectory } from './components/TeacherDirectory';
 import { StudentDirectory } from './components/StudentDirectory';
 import { ActivityGallery } from './components/ActivityGallery';
+import { KegiatanPagiSection } from './components/KegiatanPagiSection';
 import { AnnouncementsSection } from './components/AnnouncementsSection';
 import { ExtracurricularAndFacilities } from './components/ExtracurricularAndFacilities';
 import { PPDBPortal } from './components/PPDBPortal';
@@ -63,6 +64,9 @@ function SchoolAppContent() {
 
         {/* Galeri Kegiatan Sekolah (Upacara, Pramuka, Lab Sains, Seni Tari Lampung) */}
         <ActivityGallery />
+
+        {/* Submenu Kegiatan Pagi: Program Pembiasaan & Literasi Siswa */}
+        <KegiatanPagiSection />
 
         {/* Pengumuman Akademik & Surat Edaran Resmi */}
         <AnnouncementsSection />

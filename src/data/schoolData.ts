@@ -15,13 +15,24 @@ export interface Teacher {
 export interface ActivityPhoto {
   id: string;
   title: string;
-  category: 'upacara' | 'pramuka' | 'akademik' | 'seni' | 'olahraga' | 'osis';
+  category: 'upacara' | 'pramuka' | 'akademik' | 'seni' | 'olahraga' | 'osis' | 'kegiatan-pagi';
   categoryLabel: string;
   date: string;
   location: string;
   image: string;
   caption: string;
   highlight?: boolean;
+}
+
+export interface MorningActivity {
+  id: string;
+  day: 'Setiap Pagi' | 'Senin' | 'Selasa' | 'Rabu' | 'Kamis' | 'Jumat' | 'Sabtu';
+  time: string;
+  title: string;
+  coordinator: string;
+  location: string;
+  description: string;
+  imageUrl?: string;
 }
 
 export interface Announcement {
@@ -693,3 +704,73 @@ export const SCHOOL_EXTRAS = [
     desc: 'Bimbingan tahsin Al-Qur\'an, hafalan juz 30, rebana hadrah, dan kepribadian muslim berkarakter.'
   }
 ];
+
+export const INITIAL_MORNING_ACTIVITIES: MorningActivity[] = [
+  {
+    id: 'pagi-5s',
+    day: 'Setiap Pagi',
+    time: '06.45 – 07.15 WIB',
+    title: 'Penyambutan 5S (Senyum, Salam, Sapa, Sopan, Santun)',
+    coordinator: 'Tim Guru Piket & Pengurus OSIS',
+    location: 'Gerbang Utama SMPN 14 Tubaba',
+    description:
+      'Guru piket dan perwakilan OSIS menyambut kedatangan peserta didik di gerbang sekolah untuk menanamkan budaya ramah, disiplin waktu, dan kerapian seragam sejak pagi hari.',
+    imageUrl: '/src/assets/images/hero_smpn14_building_1792594018035.jpg'
+  },
+  {
+    id: 'pagi-senin',
+    day: 'Senin',
+    time: '07.00 – 07.45 WIB',
+    title: 'Upacara Bendera & Pembinaan Karakter Kebangsaan',
+    coordinator: 'Waka Kesiswaan & Pembina OSIS',
+    location: 'Lapangan Upacara Utama',
+    description:
+      'Pembiasaan kedisiplinan, pengibaran Sang Merah Putih, pembacaan UUD 1945, serta amanat pembina upacara untuk menumbuhkan nasionalisme dan karakter Nenemo.',
+    imageUrl: '/src/assets/images/activity_ceremony_1792594019651.jpg'
+  },
+  {
+    id: 'pagi-selasa',
+    day: 'Selasa',
+    time: '07.00 – 07.25 WIB',
+    title: 'Gerakan Literasi Sekolah (GLS) & Pojok Baca Pagi',
+    coordinator: 'Tim Literasi & Wali Kelas',
+    location: 'Ruang Kelas & Taman Baca',
+    description:
+      'Membaca buku non-pelajaran pilihan selama 15–20 menit sebelum jam pelajaran pertama, dilanjutkan ringkasan lisan untuk meningkatkan minat baca dan daya nalar siswa.',
+    imageUrl: '/src/assets/images/activity_science_lab_1792594020856.jpg'
+  },
+  {
+    id: 'pagi-rabu',
+    day: 'Rabu',
+    time: '07.00 – 07.30 WIB',
+    title: 'Rabu Bersih & Operasi Semut Adiwiyata',
+    coordinator: 'Pembina Adiwiyata & UKS',
+    location: 'Seluruh Lingkungan Kelas & Taman',
+    description:
+      'Gerakan bersama merawat kebersihan ruang belajar, pemilahan sampah organik dan anorganik, serta pemeliharaan tanaman peneduh sekolah.',
+    imageUrl: '/src/assets/images/activity_scout_pramuka_1792594019748.jpg'
+  },
+  {
+    id: 'pagi-kamis',
+    day: 'Kamis',
+    time: '06.50 – 07.30 WIB',
+    title: 'Senam Anak Indonesia Hebat & Kebugaran Pagi',
+    coordinator: 'Guru PJOK & Tim Olahraga',
+    location: 'Lapangan Serbaguna SMPN 14',
+    description:
+      'Senam pagi bersama seluruh guru dan siswa guna menjaga kebugaran jasmani, kekompakan, dan semangat belajar sepanjang hari.',
+    imageUrl: '/src/assets/images/activity_ceremony_1792594019651.jpg'
+  },
+  {
+    id: 'pagi-jumat',
+    day: 'Jumat',
+    time: '07.00 – 07.40 WIB',
+    title: 'Jumat Berkah, Pembinaan Imtaq & Doa Bersama',
+    coordinator: 'Guru PAI & Pembina Rohis',
+    location: 'Musholla Al-Ikhlas & Lapangan',
+    description:
+      'Pembacaan Surat Yasin, Asmaul Husna, kultum siswa, serta penguatan akhlak mulia dan kepedulian sosial warga SMPN 14 Tulang Bawang Barat.',
+    imageUrl: '/src/assets/images/hero_smpn14_building_1792594018035.jpg'
+  }
+];
+

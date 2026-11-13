@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Menu, X, GraduationCap, Phone, FileText, Settings } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Menu, X, GraduationCap, Phone, FileText, Settings, ChevronDown, Camera, Sun } from 'lucide-react';
 import { useSchoolData } from '../context/SchoolDataContext';
 
 interface NavbarProps {
@@ -15,20 +15,61 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { schoolInfo, setIsAdminOpen } = useSchoolData();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [galleryDropdownOpen, setGalleryDropdownOpen] = useState(false);
+  const [mobileGalleryOpen, setMobileGalleryOpen] = useState(true);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const navItems = [
     { id: 'beranda', label: 'Beranda' },
     { id: 'profil', label: 'Profil & Guru' },
     { id: 'peserta-didik', label: 'Peserta Didik' },
-    { id: 'galeri', label: 'Galeri Kegiatan' },
+    {
+      id: 'galeri-kegiatan',
+      label: 'Galeri Kegiatan',
+      children: [
+        {
+          id: 'galeri',
+          label: 'Galeri Foto',
+          desc: 'Dokumentasi kegiatan & prestasi siswa',
+          icon: Camera
+        },
+        {
+          id: 'kegiatan-pagi',
+          label: 'Kegiatan Pagi',
+          desc: 'Pembiasaan pagi, literasi & senam siswa',
+          icon: Sun
+        }
+      ]
+    },
     { id: 'pengumuman', label: 'Pengumuman & Berita' },
     { id: 'ppdb', label: 'PPDB Online' },
     { id: 'kontak', label: 'Kontak' }
   ];
 
+  // Close desktop dropdown on outside click or Escape key
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setGalleryDropdownOpen(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setGalleryDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
+
   const handleNavClick = (id: string) => {
     setActiveTab(id);
     setMobileMenuOpen(false);
+    setGalleryDropdownOpen(false);
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
@@ -71,7 +112,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Zone 1: Single Brand Wordmark Element */}
           <button
             onClick={() => handleNavClick('beranda')}
-            className="flex items-center gap-3.5 text-left group whitespace-nowrap shrink-0 focus:outline-hidden"
+            className="flex items-center gap-3.5 text-left group whitespace-nowrap shrink-0 focus:outline-hidden cursor-pointer"
           >
             <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shrink-0 overflow-hidden bg-transparent">
               {schoolInfo.logoUrl ? (
@@ -96,20 +137,96 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Zone 2: Single-line clean text navigation links */}
-          <nav className="hidden lg:flex items-center gap-7 text-sm font-medium text-slate-600">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item.id)}
-                className={`whitespace-nowrap shrink-0 transition-colors py-1 ${
-                  activeTab === item.id
-                    ? 'text-blue-900 font-semibold border-b-2 border-blue-900'
-                    : 'hover:text-slate-900'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
+          <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-600">
+            {navItems.map((item) => {
+              if (item.children) {
+                const isGroupActive = item.children.some((c) => c.id === activeTab);
+                return (
+                  <div
+                    key={item.id}
+                    ref={dropdownRef}
+                    className="relative"
+                    onMouseEnter={() => setGalleryDropdownOpen(true)}
+                    onMouseLeave={() => setGalleryDropdownOpen(false)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setGalleryDropdownOpen((prev) => !prev)}
+                      aria-expanded={galleryDropdownOpen}
+                      aria-haspopup="menu"
+                      className={`inline-flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors py-2 cursor-pointer ${
+                        isGroupActive || galleryDropdownOpen
+                          ? 'text-blue-900 font-semibold border-b-2 border-blue-900'
+                          : 'hover:text-slate-900'
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 transition-transform duration-150 ${
+                          galleryDropdownOpen ? 'rotate-180 text-blue-900' : 'text-slate-400'
+                        }`}
+                      />
+                    </button>
+
+                    {galleryDropdownOpen && (
+                      <div
+                        role="menu"
+                        aria-label="Submenu Galeri Kegiatan"
+                        className="absolute left-0 top-full pt-1.5 z-50 w-64"
+                      >
+                        <div className="bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 overflow-hidden">
+                          {item.children.map((sub) => {
+                            const SubIcon = sub.icon;
+                            const isSubActive = activeTab === sub.id;
+                            return (
+                              <button
+                                key={sub.id}
+                                type="button"
+                                role="menuitem"
+                                onClick={() => handleNavClick(sub.id)}
+                                className={`w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors cursor-pointer ${
+                                  isSubActive
+                                    ? 'bg-blue-50/90 text-blue-900'
+                                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                                }`}
+                              >
+                                <SubIcon
+                                  className={`w-4 h-4 mt-0.5 shrink-0 ${
+                                    isSubActive ? 'text-blue-900' : 'text-amber-600'
+                                  }`}
+                                />
+                                <div className="min-w-0">
+                                  <span className="block text-sm font-semibold leading-tight whitespace-nowrap">
+                                    {sub.label}
+                                  </span>
+                                  <span className="block text-[11px] text-slate-500 mt-0.5 leading-snug">
+                                    {sub.desc}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleNavClick(item.id)}
+                  className={`whitespace-nowrap shrink-0 transition-colors py-1 cursor-pointer ${
+                    activeTab === item.id
+                      ? 'text-blue-900 font-semibold border-b-2 border-blue-900'
+                      : 'hover:text-slate-900'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
           </nav>
 
           {/* Zone 3: 1 Primary Action */}
@@ -140,19 +257,68 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="lg:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-6 space-y-1 shadow-lg">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleNavClick(item.id)}
-              className={`block w-full text-left px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                activeTab === item.id
-                  ? 'bg-blue-50 text-blue-900 font-semibold'
-                  : 'text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+          {navItems.map((item) => {
+            if (item.children) {
+              const isGroupActive = item.children.some((c) => c.id === activeTab);
+              return (
+                <div key={item.id} className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => setMobileGalleryOpen((prev) => !prev)}
+                    aria-expanded={mobileGalleryOpen}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                      isGroupActive
+                        ? 'bg-blue-50/70 text-blue-900 font-semibold'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${
+                        mobileGalleryOpen ? 'rotate-180 text-blue-900' : 'text-slate-400'
+                      }`}
+                    />
+                  </button>
+                  {mobileGalleryOpen && (
+                    <div className="pl-4 space-y-1 border-l border-slate-200 ml-3">
+                      {item.children.map((sub) => {
+                        const SubIcon = sub.icon;
+                        return (
+                          <button
+                            key={sub.id}
+                            type="button"
+                            onClick={() => handleNavClick(sub.id)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-md text-sm transition-colors cursor-pointer ${
+                              activeTab === sub.id
+                                ? 'bg-blue-50 text-blue-900 font-semibold'
+                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                            }`}
+                          >
+                            <SubIcon className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span>{sub.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
+                className={`block w-full text-left px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                  activeTab === item.id
+                    ? 'bg-blue-50 text-blue-900 font-semibold'
+                    : 'text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
           <div className="pt-3 border-t border-slate-100 space-y-2">
             <button
               onClick={() => {

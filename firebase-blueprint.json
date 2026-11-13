@@ -123,6 +123,21 @@
         "notes": { "type": "string", "maxLength": 500 }
       },
       "required": ["registrationNumber", "fullName", "nisn", "track"]
+    },
+    "MorningActivity": {
+      "title": "MorningActivity",
+      "description": "Program pembiasaan dan dokumentasi kegiatan pagi sekolah",
+      "type": "object",
+      "properties": {
+        "day": { "type": "string", "maxLength": 30 },
+        "time": { "type": "string", "maxLength": 50 },
+        "title": { "type": "string", "maxLength": 200 },
+        "coordinator": { "type": "string", "maxLength": 150 },
+        "location": { "type": "string", "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["day", "time", "title"]
     }
   },
   "firestore": {
@@ -145,6 +160,10 @@
     "/activities/{activityId}": {
       "schema": "ActivityPhoto",
       "description": "Daftar foto kegiatan"
+    },
+    "/kegiatan_pagi/{activityId}": {
+      "schema": "MorningActivity",
+      "description": "Jadwal pembiasaan dan dokumentasi kegiatan pagi"
     },
     "/ppdb_applicants/{applicantId}": {
       "schema": "PPDBApplicant",
