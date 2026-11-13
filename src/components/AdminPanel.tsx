@@ -32,10 +32,23 @@ import {
   Target,
   Quote,
   BookOpen,
-  Sun
+  Sun,
+  Compass,
+  LogIn,
+  LogOut,
+  Eye,
+  EyeOff,
+  ShieldCheck
 } from 'lucide-react';
 import { useSchoolData } from '../context/SchoolDataContext';
-import { Teacher, ActivityPhoto, Announcement, Student, MorningActivity } from '../data/schoolData';
+import {
+  Teacher,
+  ActivityPhoto,
+  Announcement,
+  Student,
+  MorningActivity,
+  ExtracurricularItem
+} from '../data/schoolData';
 import { compressImage } from '../utils/imageCompressor';
 
 export const AdminPanel: React.FC = () => {
@@ -52,6 +65,10 @@ export const AdminPanel: React.FC = () => {
     updateStudent,
     deleteStudent,
     importStudents,
+    extracurriculars,
+    addExtracurricular,
+    updateExtracurricular,
+    deleteExtracurricular,
     announcements,
     addAnnouncement,
     deleteAnnouncement,
@@ -66,21 +83,37 @@ export const AdminPanel: React.FC = () => {
     updateApplicantStatus,
     isAdminOpen,
     setIsAdminOpen,
+    isAdminAuthenticated,
+    isFirebaseAdmin,
+    firebaseUser,
+    cloudAuthError,
+    clearCloudAuthError,
+    loginAdmin,
+    loginWithGoogleAdmin,
+    logoutAdmin,
     adminInitialTab,
     resetToDefault,
     isFirebaseConnected,
     syncStatus
   } = useSchoolData();
 
-  const [activeTab, setActiveTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb'>('profil');
+  const [activeTab, setActiveTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb'>('profil');
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+
+  // Login form state
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isGoogleLoginLoading, setIsGoogleLoginLoading] = useState(false);
 
   // Edit modal states for individual records
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [editingMorning, setEditingMorning] = useState<MorningActivity | null>(null);
+  const [editingEkskul, setEditingEkskul] = useState<ExtracurricularItem | null>(null);
 
   useEffect(() => {
     if (adminInitialTab) {
@@ -104,6 +137,11 @@ export const AdminPanel: React.FC = () => {
     decreeNumber: schoolInfo.decreeNumber || '420/188/II.01/TUBABA/2016',
     mottoLocal: schoolInfo.mottoLocal || 'Ragem Sai Mangi Wawai',
     mottoValues: schoolInfo.mottoValues || 'Nenemo (Nemen, Nedes, Nerimo)',
+    heroHeadline: schoolInfo.heroHeadline || 'Mendidik Generasi Berilmu, Berakhlak Mulia & Berbudaya',
+    heroHighlight: schoolInfo.heroHighlight ?? 'Nenemo',
+    heroDescription: schoolInfo.heroDescription || '',
+    topBarLabel: schoolInfo.topBarLabel || 'PENGUMUMAN PPDB:',
+    topBarText: schoolInfo.topBarText || 'Pendaftaran Peserta Didik Baru TA 2026/2027 telah dibuka secara daring',
     address: schoolInfo.address,
     phone: schoolInfo.phone,
     whatsapp: schoolInfo.whatsapp,
@@ -132,6 +170,11 @@ export const AdminPanel: React.FC = () => {
       decreeNumber: schoolInfo.decreeNumber || '420/188/II.01/TUBABA/2016',
       mottoLocal: schoolInfo.mottoLocal || 'Ragem Sai Mangi Wawai',
       mottoValues: schoolInfo.mottoValues || 'Nenemo (Nemen, Nedes, Nerimo)',
+      heroHeadline: schoolInfo.heroHeadline || 'Mendidik Generasi Berilmu, Berakhlak Mulia & Berbudaya',
+      heroHighlight: schoolInfo.heroHighlight ?? 'Nenemo',
+      heroDescription: schoolInfo.heroDescription || '',
+      topBarLabel: schoolInfo.topBarLabel || 'PENGUMUMAN PPDB:',
+      topBarText: schoolInfo.topBarText || 'Pendaftaran Peserta Didik Baru TA 2026/2027 telah dibuka secara daring',
       address: schoolInfo.address,
       phone: schoolInfo.phone,
       whatsapp: schoolInfo.whatsapp,
@@ -229,7 +272,189 @@ export const AdminPanel: React.FC = () => {
   });
   const morningImageInputRef = useRef<HTMLInputElement>(null);
 
+  // Form states for New Extracurricular (Ekstrakurikuler)
+  const [newEkskul, setNewEkskul] = useState({
+    name: '',
+    category: 'Wajib & Kepemimpinan',
+    schedule: '',
+    coach: '',
+    desc: ''
+  });
+
   if (!isAdminOpen) return null;
+
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const ok = loginAdmin(loginUsername, loginPassword);
+    if (!ok) {
+      setLoginError('Username atau password tidak sesuai. Silakan periksa kembali.');
+      return;
+    }
+    setLoginError(null);
+    setLoginUsername('');
+    setLoginPassword('');
+    setShowLoginPassword(false);
+  };
+
+  if (!isAdminAuthenticated) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          {/* Header */}
+          <div className="bg-slate-900 text-white px-6 py-5 flex items-center justify-between border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-900 border border-blue-700/80 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold leading-tight">Masuk Menu Pengelola</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {schoolInfo.shortName || schoolInfo.name}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setLoginError(null);
+                setLoginPassword('');
+                setIsAdminOpen(false);
+              }}
+              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              aria-label="Tutup form login"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Login Form */}
+          <form onSubmit={handleLoginSubmit} className="p-6 space-y-4 text-xs">
+            <p className="text-slate-600 leading-relaxed">
+              Silakan masuk menggunakan akun administrator untuk mengakses seluruh pengaturan profil, berita, galeri, data guru, siswa, dan PPDB.
+            </p>
+
+            {loginError && (
+              <div
+                role="alert"
+                className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800"
+              >
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span className="font-medium leading-snug">{loginError}</span>
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="admin-login-username" className="font-semibold text-slate-700 block mb-1.5">
+                Username
+              </label>
+              <input
+                id="admin-login-username"
+                type="text"
+                required
+                autoFocus
+                autoComplete="username"
+                placeholder="Masukkan username pengelola"
+                value={loginUsername}
+                onChange={(e) => {
+                  setLoginUsername(e.target.value);
+                  if (loginError) setLoginError(null);
+                }}
+                className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-900 transition-colors"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="admin-login-password" className="font-semibold text-slate-700 block mb-1.5">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="admin-login-password"
+                  type={showLoginPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="current-password"
+                  placeholder="Masukkan password pengelola"
+                  value={loginPassword}
+                  onChange={(e) => {
+                    setLoginPassword(e.target.value);
+                    if (loginError) setLoginError(null);
+                  }}
+                  className="w-full pl-3.5 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-900 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+                  aria-label={showLoginPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                >
+                  {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginError(null);
+                  clearCloudAuthError();
+                  setLoginPassword('');
+                  setIsAdminOpen(false);
+                }}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <LogIn className="w-4 h-4 text-amber-300" />
+                <span>Masuk</span>
+              </button>
+            </div>
+
+            {/* Divider & Firebase Auth Google Admin Login */}
+            <div className="pt-3 border-t border-slate-100 space-y-2.5">
+              <div className="text-[11px] text-center text-slate-500 font-medium">
+                atau verifikasi cloud Firebase Authentication
+              </div>
+              {cloudAuthError && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px]"
+                >
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span className="leading-snug">{cloudAuthError}</span>
+                </div>
+              )}
+              <button
+                type="button"
+                disabled={isGoogleLoginLoading}
+                onClick={async () => {
+                  setLoginError(null);
+                  setIsGoogleLoginLoading(true);
+                  const ok = await loginWithGoogleAdmin();
+                  setIsGoogleLoginLoading(false);
+                  if (ok) {
+                    setLoginUsername('');
+                    setLoginPassword('');
+                    showSuccess('Login Google Admin terverifikasi!');
+                  }
+                }}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-xl font-semibold text-xs transition-colors cursor-pointer disabled:opacity-60"
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>
+                  {isGoogleLoginLoading ? 'Memverifikasi Google...' : 'Masuk dengan Akun Google Admin'}
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   const showSuccess = (msg: string) => {
     setSuccessToast(msg);
@@ -929,6 +1154,31 @@ export const AdminPanel: React.FC = () => {
     showSuccess('Program Kegiatan Pagi baru berhasil ditambahkan & disinkronkan!');
   };
 
+  // 7. Extracurricular Add
+  const handleAddEkskul = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEkskul.name.trim()) return;
+
+    const item: ExtracurricularItem = {
+      id: 'ekskul-' + Date.now(),
+      name: newEkskul.name.trim(),
+      category: newEkskul.category.trim() || 'Pengembangan Diri',
+      schedule: newEkskul.schedule.trim() || 'Jadwal menyusul',
+      coach: newEkskul.coach.trim() || 'Tim Pembina Ekstrakurikuler',
+      desc: newEkskul.desc.trim() || newEkskul.name.trim()
+    };
+
+    await addExtracurricular(item);
+    setNewEkskul({
+      name: '',
+      category: 'Wajib & Kepemimpinan',
+      schedule: '',
+      coach: '',
+      desc: ''
+    });
+    showSuccess('Program Ekstrakurikuler baru berhasil ditambahkan & disinkronkan!');
+  };
+
   // Filtered students inside admin table
   const filteredAdminStudents = students.filter((s) => {
     const matchSearch =
@@ -956,17 +1206,39 @@ export const AdminPanel: React.FC = () => {
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
-                Sesi Administrator: <span className="text-amber-400 font-mono">imamarifin55@admin.smp.belajar.id</span>
+                Sesi Pengelola:{' '}
+                <span className="text-amber-400 font-mono">
+                  {isFirebaseAdmin && firebaseUser?.email ? firebaseUser.email : 'administrator'}
+                </span>
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 text-[11px] font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <Database className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Firebase Online Realtime</span>
-            </div>
+            {isFirebaseAdmin ? (
+              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 text-[11px] font-medium">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Firebase Auth Terverifikasi</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={isGoogleLoginLoading}
+                onClick={async () => {
+                  setIsGoogleLoginLoading(true);
+                  const ok = await loginWithGoogleAdmin();
+                  setIsGoogleLoginLoading(false);
+                  if (ok) {
+                    showSuccess('Firebase Auth Admin berhasil terhubung!');
+                  }
+                }}
+                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-300 text-[11px] font-semibold transition-colors cursor-pointer whitespace-nowrap"
+                title="Hubungkan Akun Google Admin agar penulisan Firestore diizinkan oleh aturan keamanan"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>{isGoogleLoginLoading ? 'Memverifikasi...' : 'Hubungkan Google Admin'}</span>
+              </button>
+            )}
 
             <button
               onClick={() => {
@@ -980,6 +1252,15 @@ export const AdminPanel: React.FC = () => {
             >
               <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
               <span>Reset Default</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => logoutAdmin()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:text-white bg-rose-950/50 hover:bg-rose-900/80 border border-rose-800/60 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+              title="Keluar dari sesi pengelola"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Keluar</span>
             </button>
             <button
               onClick={() => setIsAdminOpen(false)}
@@ -1055,6 +1336,23 @@ export const AdminPanel: React.FC = () => {
                 </div>
                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-400/20 text-amber-300 font-mono font-bold">
                   {students.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('ekstrakurikuler')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
+                  activeTab === 'ekstrakurikuler'
+                    ? 'bg-blue-900 text-white shadow-xs font-bold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <Compass className="w-4 h-4 shrink-0 text-amber-400" />
+                  <span className="truncate">Ekstrakurikuler</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
+                  {extracurriculars.length}
                 </span>
               </button>
 
@@ -1178,6 +1476,40 @@ export const AdminPanel: React.FC = () => {
 
           {/* Right Main Content Body */}
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50/50">
+            {/* Firebase Auth Security Verification Banner */}
+            {!isFirebaseAdmin && (
+              <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-start gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <div className="font-bold text-slate-900">
+                      Verifikasi Firebase Auth Diperlukan untuk Simpan ke Cloud
+                    </div>
+                    <p className="text-slate-700 leading-relaxed">
+                      {cloudAuthError ||
+                        'Aturan keamanan Firestore aktif (hanya admin terverifikasi yang dapat menulis data). Hubungkan akun Google Admin (imamarifin55@admin.smp.belajar.id) agar perubahan tersimpan permanen ke server cloud.'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={isGoogleLoginLoading}
+                  onClick={async () => {
+                    setIsGoogleLoginLoading(true);
+                    const ok = await loginWithGoogleAdmin();
+                    setIsGoogleLoginLoading(false);
+                    if (ok) {
+                      showSuccess('Akun Google Admin terverifikasi! Siap sinkronisasi ke Firestore.');
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-semibold rounded-xl transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-60"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+                  <span>{isGoogleLoginLoading ? 'Memverifikasi...' : 'Hubungkan Google Admin'}</span>
+                </button>
+              </div>
+            )}
+
             {/* TAB: PROFIL SEKOLAH, LOGO & UNGGAH FOTO KAMPUS */}
             {activeTab === 'profil' && (
               <form onSubmit={handleSaveProfile} className="max-w-3xl space-y-6 animate-in fade-in duration-200">
@@ -1389,6 +1721,105 @@ export const AdminPanel: React.FC = () => {
                     >
                       <Save className="w-3.5 h-3.5 text-amber-300" />
                       <span>Simpan Foto &amp; Keterangan Sekolah</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Pengaturan Header Judul Utama & Pita Pengumuman Atas (Landing Page) */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-2">
+                      <Edit3 className="w-4 h-4" />
+                      <span>Teks Header Berita &amp; Judul Utama Beranda (Landing Page)</span>
+                    </h4>
+                    <span className="text-[11px] text-slate-500">
+                      Mengubah judul besar &ldquo;Mendidik Generasi...&rdquo; dan pita pengumuman atas
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="sm:col-span-2">
+                      <label className="font-semibold text-slate-700 block mb-1">
+                        Judul Utama Header Halaman Depan (Headline)
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.heroHeadline}
+                        onChange={(e) => setProfileForm({ ...profileForm, heroHeadline: e.target.value })}
+                        placeholder="Mendidik Generasi Berilmu, Berakhlak Mulia & Berbudaya"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-semibold focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">
+                        Kata Sorotan Biru (Akhir Judul)
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.heroHighlight}
+                        onChange={(e) => setProfileForm({ ...profileForm, heroHighlight: e.target.value })}
+                        placeholder="Nenemo"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-blue-900 font-bold focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="text-xs">
+                    <label className="font-semibold text-slate-700 block mb-1">
+                      Paragraf Pengantar di Bawah Judul Utama
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={profileForm.heroDescription}
+                      onChange={(e) => setProfileForm({ ...profileForm, heroDescription: e.target.value })}
+                      placeholder="Selamat datang di portal resmi SMP Negeri 14 Tulang Bawang Barat..."
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 leading-relaxed focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100 text-xs">
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">
+                        Label Pita Pengumuman Atas
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.topBarLabel}
+                        onChange={(e) => setProfileForm({ ...profileForm, topBarLabel: e.target.value })}
+                        placeholder="PENGUMUMAN PPDB:"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-amber-700 font-bold focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="font-semibold text-slate-700 block mb-1">
+                        Isi Teks Pita Pengumuman Paling Atas
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.topBarText}
+                        onChange={(e) => setProfileForm({ ...profileForm, topBarText: e.target.value })}
+                        placeholder="Pendaftaran Peserta Didik Baru TA 2026/2027 telah dibuka secara daring"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const cleanMissions = profileForm.missions.map((m) => m.trim()).filter(Boolean);
+                        await updateSchoolInfo({
+                          ...schoolInfo,
+                          ...profileForm,
+                          missions: cleanMissions.length > 0 ? cleanMissions : schoolInfo.missions
+                        });
+                        showSuccess('Teks Header & Pengumuman Atas berhasil diperbarui di Landing Page!');
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer"
+                    >
+                      <Save className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Simpan Header Halaman Depan</span>
                     </button>
                   </div>
                 </div>
@@ -2384,6 +2815,141 @@ export const AdminPanel: React.FC = () => {
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: EKSTRAKURIKULER */}
+            {activeTab === 'ekstrakurikuler' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-slate-200 pb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Kelola Program Ekstrakurikuler Siswa</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Tambah, ubah jadwal, pembina, atau hapus daftar ekstrakurikuler yang tampil di submenu Peserta Didik &amp; Ekstrakurikuler.
+                  </p>
+                </div>
+
+                <form onSubmit={handleAddEkskul} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                    <Compass className="w-4 h-4 text-amber-600" />
+                    <span>Tambah Ekstrakurikuler Baru</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Nama Ekstrakurikuler *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: Paskibra SMPN 14 / Klub Coding"
+                        value={newEkskul.name}
+                        onChange={(e) => setNewEkskul({ ...newEkskul, name: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Kategori Bidang</label>
+                      <select
+                        value={newEkskul.category}
+                        onChange={(e) => setNewEkskul({ ...newEkskul, category: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      >
+                        <option value="Wajib & Kepemimpinan">Wajib &amp; Kepemimpinan</option>
+                        <option value="Seni Budaya">Seni Budaya</option>
+                        <option value="Kemanusiaan">Kemanusiaan</option>
+                        <option value="Olahraga Prestasi">Olahraga Prestasi</option>
+                        <option value="Akademik Unggulan">Akademik Unggulan</option>
+                        <option value="Keagamaan">Keagamaan</option>
+                        <option value="Teknologi & Literasi">Teknologi &amp; Literasi</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Jadwal Latihan *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: Sabtu, 14.00 - 16.00 WIB"
+                        value={newEkskul.schedule}
+                        onChange={(e) => setNewEkskul({ ...newEkskul, schedule: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-semibold text-slate-700 block mb-1">Nama Pembina / Pelatih *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: Pak Bagus Prakoso, S.Pd."
+                        value={newEkskul.coach}
+                        onChange={(e) => setNewEkskul({ ...newEkskul, coach: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="font-semibold text-slate-700 block mb-1">Deskripsi Kegiatan &amp; Materi</label>
+                      <textarea
+                        rows={2}
+                        placeholder="Jelaskan fokus pembinaan, prestasi, dan keterampilan yang dilatih..."
+                        value={newEkskul.desc}
+                        onChange={(e) => setNewEkskul({ ...newEkskul, desc: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-blue-900 text-white font-semibold text-xs rounded-xl hover:bg-blue-800 transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Plus className="w-4 h-4 text-amber-300" />
+                      <span>Simpan Ekstrakurikuler</span>
+                    </button>
+                  </div>
+                </form>
+
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Daftar Ekstrakurikuler Aktif ({extracurriculars.length})
+                  </h4>
+                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white text-xs shadow-xs">
+                    {extracurriculars.map((item) => (
+                      <div key={item.id} className="p-3.5 flex items-center justify-between gap-4 hover:bg-slate-50">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-slate-900">{item.name}</span>
+                            <span className="text-[11px] font-semibold text-blue-900">· {item.category}</span>
+                          </div>
+                          <div className="text-slate-500 text-[11px] mt-0.5 truncate">
+                            {item.schedule} · Pembina: {item.coach}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setEditingEkskul(item)}
+                            className="p-1.5 text-blue-900 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                            title="Edit ekstrakurikuler"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`Hapus program ekstrakurikuler "${item.name}"?`)) {
+                                deleteExtracurricular(item.id);
+                                showSuccess('Program ekstrakurikuler telah dihapus.');
+                              }
+                            }}
+                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                            title="Hapus ekstrakurikuler"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -3475,6 +4041,111 @@ export const AdminPanel: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setEditingMorning(null)}
+                    className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Save className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Simpan Perubahan</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Edit Ekstrakurikuler */}
+        {editingEkskul && (
+          <div className="fixed inset-0 z-60 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-xl p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <Compass className="w-4 h-4 text-amber-600" />
+                  <span>Edit Program Ekstrakurikuler</span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setEditingEkskul(null)}
+                  className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!editingEkskul.name.trim()) return;
+                  await updateExtracurricular(editingEkskul.id, editingEkskul);
+                  setEditingEkskul(null);
+                  showSuccess(`Ekstrakurikuler "${editingEkskul.name}" berhasil diperbarui!`);
+                }}
+                className="space-y-3 text-xs"
+              >
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Nama Ekstrakurikuler</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingEkskul.name}
+                    onChange={(e) => setEditingEkskul({ ...editingEkskul, name: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Kategori Bidang</label>
+                    <select
+                      value={editingEkskul.category}
+                      onChange={(e) => setEditingEkskul({ ...editingEkskul, category: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    >
+                      <option value="Wajib & Kepemimpinan">Wajib &amp; Kepemimpinan</option>
+                      <option value="Seni Budaya">Seni Budaya</option>
+                      <option value="Kemanusiaan">Kemanusiaan</option>
+                      <option value="Olahraga Prestasi">Olahraga Prestasi</option>
+                      <option value="Akademik Unggulan">Akademik Unggulan</option>
+                      <option value="Keagamaan">Keagamaan</option>
+                      <option value="Teknologi & Literasi">Teknologi &amp; Literasi</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-1">Jadwal Latihan</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingEkskul.schedule}
+                      onChange={(e) => setEditingEkskul({ ...editingEkskul, schedule: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Nama Pembina / Pelatih</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingEkskul.coach}
+                    onChange={(e) => setEditingEkskul({ ...editingEkskul, coach: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Deskripsi Kegiatan</label>
+                  <textarea
+                    rows={3}
+                    value={editingEkskul.desc}
+                    onChange={(e) => setEditingEkskul({ ...editingEkskul, desc: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setEditingEkskul(null)}
                     className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold cursor-pointer"
                   >
                     Batal

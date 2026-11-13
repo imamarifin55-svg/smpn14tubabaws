@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -8,6 +8,11 @@ const app = initializeApp(firebaseConfig);
 // CRITICAL: Connect to the specific firestoreDatabaseId provisioned
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+export const signInWithGoogleAdmin = () => signInWithPopup(auth, googleProvider);
+export const signOutFirebase = () => signOut(auth);
 
 export enum OperationType {
   CREATE = 'create',

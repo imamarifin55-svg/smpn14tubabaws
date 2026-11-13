@@ -6,13 +6,12 @@ import {
   Users,
   X,
   ChevronLeft,
-  ChevronRight,
-  Settings
+  ChevronRight
 } from 'lucide-react';
 import { useSchoolData } from '../context/SchoolDataContext';
 
 export const KegiatanPagiSection: React.FC = () => {
-  const { morningActivities, activities, setAdminInitialTab, setIsAdminOpen } = useSchoolData();
+  const { morningActivities, activities } = useSchoolData();
   const [selectedDay, setSelectedDay] = useState<string>('all');
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
@@ -80,20 +79,6 @@ export const KegiatanPagiSection: React.FC = () => {
               Rangkaian pembiasaan pagi SMPN 14 Tulang Bawang Barat sebelum pembelajaran dimulai untuk
               membangun disiplin, literasi, kebugaran, serta karakter religius dan berbudaya Nenemo.
             </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                setAdminInitialTab('kegiatan-pagi');
-                setIsAdminOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-blue-900 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span>Kelola Kegiatan Pagi</span>
-            </button>
           </div>
         </div>
 

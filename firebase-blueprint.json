@@ -12,6 +12,11 @@
         "headmaster": { "type": "string", "maxLength": 150 },
         "mottoLocal": { "type": "string", "maxLength": 100 },
         "mottoValues": { "type": "string", "maxLength": 100 },
+        "heroHeadline": { "type": "string", "maxLength": 250 },
+        "heroHighlight": { "type": "string", "maxLength": 80 },
+        "heroDescription": { "type": "string", "maxLength": 600 },
+        "topBarLabel": { "type": "string", "maxLength": 80 },
+        "topBarText": { "type": "string", "maxLength": 250 },
         "address": { "type": "string", "maxLength": 300 },
         "phone": { "type": "string", "maxLength": 50 },
         "whatsapp": { "type": "string", "maxLength": 50 },
@@ -138,6 +143,19 @@
         "imageUrl": { "type": "string" }
       },
       "required": ["day", "time", "title"]
+    },
+    "ExtracurricularItem": {
+      "title": "ExtracurricularItem",
+      "description": "Program kegiatan ekstrakurikuler peserta didik",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "maxLength": 80 },
+        "schedule": { "type": "string", "maxLength": 120 },
+        "coach": { "type": "string", "maxLength": 150 },
+        "desc": { "type": "string", "maxLength": 800 }
+      },
+      "required": ["name", "category", "schedule", "coach"]
     }
   },
   "firestore": {
@@ -164,6 +182,10 @@
     "/kegiatan_pagi/{activityId}": {
       "schema": "MorningActivity",
       "description": "Jadwal pembiasaan dan dokumentasi kegiatan pagi"
+    },
+    "/ekstrakurikuler/{ekskulId}": {
+      "schema": "ExtracurricularItem",
+      "description": "Daftar program ekstrakurikuler peserta didik"
     },
     "/ppdb_applicants/{applicantId}": {
       "schema": "PPDBApplicant",

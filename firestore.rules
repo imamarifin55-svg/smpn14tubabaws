@@ -2,8 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // --- Reusable Security Helpers ---
     function isValidId(id) {
       return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
     }
 
     function isSignedIn() {
@@ -11,69 +16,182 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return (request.auth != null && (
-        request.auth.token.email == "imamarifin55@admin.smp.belajar.id" ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      ));
+      return isSignedIn() &&
+        request.auth.token.email_verified == true && (
+          request.auth.token.email == "imamarifin55@admin.smp.belajar.id" ||
+          exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        );
     }
 
-    // Default deny catch-all
+    // --- Validation Blueprints ---
+    function isValidSchoolInfo(data) {
+      return data.keys().hasAll(['name', 'npsn', 'headmaster']) &&
+        data.keys().hasOnly([
+          'name', 'shortName', 'npsn', 'accreditation', 'decreeNumber',
+          'headmaster', 'headmasterNip', 'headmasterEducation', 'headmasterPhotoUrl', 'headmasterQuote',
+          'vision', 'missions', 'mottoLocal', 'mottoValues',
+          'heroHeadline', 'heroHighlight', 'heroDescription', 'topBarLabel', 'topBarText',
+          'address', 'phone', 'whatsapp', 'email', 'workingHours',
+          'logoUrl', 'campusImageUrl', 'campusTitle', 'campusDescription',
+          'stats', 'updatedAt'
+        ]) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+        data.npsn is string && data.npsn.size() > 0 && data.npsn.size() <= 20 &&
+        data.headmaster is string && data.headmaster.size() > 0 && data.headmaster.size() <= 150 &&
+        (!('missions' in data) || (data.missions is list && data.missions.size() <= 30 && (data.missions.size() == 0 || data.missions[0] is string))) &&
+        (!('stats' in data) || (data.stats is list && data.stats.size() <= 10)) &&
+        (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() <= 500000)) &&
+        (!('campusImageUrl' in data) || (data.campusImageUrl is string && data.campusImageUrl.size() <= 500000)) &&
+        (!('headmasterPhotoUrl' in data) || (data.headmasterPhotoUrl is string && data.headmasterPhotoUrl.size() <= 500000));
+    }
+
+    function isValidTeacher(data) {
+      return data.keys().hasAll(['id', 'name', 'subject', 'category']) &&
+        data.keys().hasOnly(['id', 'name', 'nip', 'role', 'subject', 'category', 'education', 'photoUrl', 'initials', 'bio', 'colorScheme']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+        data.subject is string && data.subject.size() > 0 && data.subject.size() <= 150 &&
+        data.category in ['pimpinan', 'guru', 'bk', 'tendik'] &&
+        (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 500000));
+    }
+
+    function isValidStudent(data) {
+      return data.keys().hasAll(['id', 'nisn', 'fullName', 'gender', 'grade', 'rombel']) &&
+        data.keys().hasOnly(['id', 'nisn', 'nis', 'fullName', 'gender', 'grade', 'rombel', 'birthPlace', 'birthDate', 'address', 'parentName', 'parentPhone', 'status']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.nisn is string && data.nisn.size() > 0 && data.nisn.size() <= 20 &&
+        data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 150 &&
+        data.gender in ['Laki-laki', 'Perempuan'] &&
+        data.grade in ['VII', 'VIII', 'IX'] &&
+        data.rombel is string && data.rombel.size() > 0 && data.rombel.size() <= 50;
+    }
+
+    function isValidAnnouncement(data) {
+      return data.keys().hasAll(['id', 'title', 'category', 'content']) &&
+        data.keys().hasOnly(['id', 'title', 'category', 'date', 'dateIso', 'summary', 'content', 'imageUrl', 'documentName', 'documentUrl', 'important']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+        data.category in ['Akademik', 'Kesiswaan', 'PPDB', 'Edaran', 'Berita'] &&
+        data.content is string && data.content.size() > 0 && data.content.size() <= 20000 &&
+        (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 500000)) &&
+        (!('documentUrl' in data) || (data.documentUrl is string && data.documentUrl.size() <= 700000));
+    }
+
+    function isValidActivity(data) {
+      return data.keys().hasAll(['id', 'title', 'category', 'image']) &&
+        data.keys().hasOnly(['id', 'title', 'category', 'categoryLabel', 'date', 'location', 'image', 'caption', 'highlight']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+        data.category in ['upacara', 'pramuka', 'akademik', 'seni', 'olahraga', 'osis', 'kegiatan-pagi'] &&
+        data.image is string && data.image.size() > 0 && data.image.size() <= 500000;
+    }
+
+    function isValidMorningActivity(data) {
+      return data.keys().hasAll(['id', 'day', 'time', 'title']) &&
+        data.keys().hasOnly(['id', 'day', 'time', 'title', 'coordinator', 'location', 'description', 'imageUrl']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.day in ['Setiap Pagi', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] &&
+        data.time is string && data.time.size() > 0 && data.time.size() <= 50 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+        (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 500000));
+    }
+
+    function isValidExtracurricular(data) {
+      return data.keys().hasAll(['id', 'name', 'category', 'schedule', 'coach']) &&
+        data.keys().hasOnly(['id', 'name', 'category', 'schedule', 'coach', 'desc']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+        data.category is string && data.category.size() > 0 && data.category.size() <= 80 &&
+        data.schedule is string && data.schedule.size() > 0 && data.schedule.size() <= 120 &&
+        data.coach is string && data.coach.size() > 0 && data.coach.size() <= 150 &&
+        (!('desc' in data) || (data.desc is string && data.desc.size() <= 800));
+    }
+
+    function isValidPPDBApplicant(data) {
+      return data.keys().hasAll(['registrationNumber', 'fullName', 'nisn', 'track', 'status']) &&
+        data.keys().hasOnly(['registrationNumber', 'fullName', 'nisn', 'nik', 'birthPlace', 'birthDate', 'gender', 'previousSchool', 'track', 'parentName', 'parentPhone', 'address', 'submissionDate', 'status', 'notes']) &&
+        data.registrationNumber is string && data.registrationNumber.size() > 0 && data.registrationNumber.size() <= 50 &&
+        data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 150 &&
+        data.nisn is string && data.nisn.size() > 0 && data.nisn.size() <= 20 &&
+        data.track in ['Zonasi', 'Prestasi', 'Afirmasi', 'Pindah Tugas'] &&
+        data.status in ['Terverifikasi', 'Menunggu Berkas', 'Lolos Seleksi', 'Cadangan'];
+    }
+
+    // --- Default Deny Catch-All ---
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Admin collection
+    // --- Admin Role Documents ---
     match /admins/{adminId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow get: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin() && isValidId(adminId);
     }
 
-    // Connection test collection
+    // --- Connection Test Collection ---
     match /test/{docId} {
-      allow read: if true;
+      allow get: if true;
     }
 
-    // School Profile Info
+    // --- School Profile Info (Public Read, Admin-Only Write) ---
     match /school_info/{infoId} {
       allow read: if true;
-      allow write: if true;
+      allow create, update: if isAdmin() && isValidId(infoId) && isValidSchoolInfo(incoming());
+      allow delete: if isAdmin() && isValidId(infoId);
     }
 
-    // Teachers
+    // --- Teachers (Public Read, Admin-Only Write) ---
     match /teachers/{teacherId} {
       allow read: if true;
-      allow write: if true;
+      allow create, update: if isAdmin() && isValidId(teacherId) && isValidTeacher(incoming());
+      allow delete: if isAdmin() && isValidId(teacherId);
     }
 
-    // Students
+    // --- Students (Public Read, Admin-Only Write) ---
     match /students/{studentId} {
       allow read: if true;
-      allow write: if true;
+      allow create, update: if isAdmin() && isValidId(studentId) && isValidStudent(incoming());
+      allow delete: if isAdmin() && isValidId(studentId);
     }
 
-    // Announcements & News
+    // --- Announcements & News (Public Read, Admin-Only Write) ---
     match /announcements/{announcementId} {
       allow read: if true;
-      allow write: if true;
+      allow create, update: if isAdmin() && isValidId(announcementId) && isValidAnnouncement(incoming());
+      allow delete: if isAdmin() && isValidId(announcementId);
     }
 
-    // Activity Photos
+    // --- Activity Photos (Public Read, Admin-Only Write) ---
     match /activities/{activityId} {
       allow read: if true;
-      allow write: if true;
+      allow create, update: if isAdmin() && isValidId(activityId) && isValidActivity(incoming());
+      allow delete: if isAdmin() && isValidId(activityId);
     }
 
-    // Morning Activities (Kegiatan Pagi)
+    // --- Morning Activities / Kegiatan Pagi (Public Read, Admin-Only Write) ---
     match /kegiatan_pagi/{activityId} {
       allow read: if true;
-      allow write: if true;
+      allow create, update: if isAdmin() && isValidId(activityId) && isValidMorningActivity(incoming());
+      allow delete: if isAdmin() && isValidId(activityId);
     }
 
-    // PPDB Applicants
+    // --- Extracurriculars / Ekstrakurikuler (Public Read, Admin-Only Write) ---
+    match /ekstrakurikuler/{ekskulId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidId(ekskulId) && isValidExtracurricular(incoming());
+      allow delete: if isAdmin() && isValidId(ekskulId);
+    }
+
+    // --- PPDB Applicants (Public Read & Self-Create; Admin-Only Update/Delete/Approve) ---
     match /ppdb_applicants/{applicantId} {
       allow read: if true;
-      allow create: if isValidId(applicantId);
-      allow update, delete: if true;
+      allow create: if isValidId(applicantId) &&
+        isValidPPDBApplicant(incoming()) &&
+        incoming().registrationNumber == applicantId &&
+        (isAdmin() || incoming().status in ['Terverifikasi', 'Menunggu Berkas']);
+      allow update: if isAdmin() && isValidId(applicantId) && isValidPPDBApplicant(incoming());
+      allow delete: if isAdmin() && isValidId(applicantId);
     }
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Compass,
   Trophy,
@@ -11,10 +11,18 @@ import {
   Calendar,
   UserCheck
 } from 'lucide-react';
-import { SCHOOL_EXTRAS, SCHOOL_FACILITIES } from '../data/schoolData';
+import { SCHOOL_FACILITIES } from '../data/schoolData';
+import { useSchoolData } from '../context/SchoolDataContext';
 
 export const ExtracurricularAndFacilities: React.FC = () => {
+  const { extracurriculars } = useSchoolData();
   const [activeSection, setActiveSection] = useState<'ekskul' | 'fasilitas'>('ekskul');
+
+  useEffect(() => {
+    const handleSelectEkskul = () => setActiveSection('ekskul');
+    window.addEventListener('select-ekskul-tab', handleSelectEkskul);
+    return () => window.removeEventListener('select-ekskul-tab', handleSelectEkskul);
+  }, []);
 
   const facilityIcons: Record<string, React.ReactNode> = {
     DoorOpen: <DoorOpen className="w-5 h-5 text-blue-900" />,
@@ -26,7 +34,7 @@ export const ExtracurricularAndFacilities: React.FC = () => {
   };
 
   return (
-    <section className="py-16 lg:py-24 bg-slate-50 border-t border-slate-200">
+    <section id="ekstrakurikuler" className="py-16 lg:py-24 bg-slate-50 border-t border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
@@ -50,17 +58,17 @@ export const ExtracurricularAndFacilities: React.FC = () => {
           <div className="flex items-center gap-1.5 p-1 bg-slate-200/80 rounded-xl shrink-0">
             <button
               onClick={() => setActiveSection('ekskul')}
-              className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                 activeSection === 'ekskul'
                   ? 'bg-white text-blue-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Ekstrakurikuler ({SCHOOL_EXTRAS.length})
+              Ekstrakurikuler ({extracurriculars.length})
             </button>
             <button
               onClick={() => setActiveSection('fasilitas')}
-              className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                 activeSection === 'fasilitas'
                   ? 'bg-white text-blue-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -74,9 +82,9 @@ export const ExtracurricularAndFacilities: React.FC = () => {
         {/* Ekstrakurikuler Grid */}
         {activeSection === 'ekskul' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-200">
-            {SCHOOL_EXTRAS.map((extra) => (
+            {extracurriculars.map((extra) => (
               <div
-                key={extra.name}
+                key={extra.id}
                 className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between"
               >
                 <div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Sparkles, MapPin, Clock, ShieldCheck, GraduationCap, Award, Camera } from 'lucide-react';
+import { ArrowRight, Sparkles, MapPin, Clock, ShieldCheck, GraduationCap, Award } from 'lucide-react';
 import { useSchoolData } from '../context/SchoolDataContext';
 
 interface HeroProps {
@@ -8,7 +8,7 @@ interface HeroProps {
 }
 
 export const Hero: React.FC<HeroProps> = ({ onOpenPPDB, onNavigate }) => {
-  const { schoolInfo, setAdminInitialTab, setIsAdminOpen } = useSchoolData();
+  const { schoolInfo } = useSchoolData();
   return (
     <section id="beranda" className="relative bg-white pt-8 pb-16 lg:pt-14 lg:pb-20 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -27,14 +27,26 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPPDB, onNavigate }) => {
 
             {/* Display Headline with balanced wrapping */}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.18] text-balance mb-5">
-              Mendidik Generasi Berilmu, Berakhlak Mulia &amp; Berbudaya <span className="text-blue-900">{schoolInfo.mottoValues?.split(' ')[0] || 'Nenemo'}</span>
+              {schoolInfo.heroHeadline || 'Mendidik Generasi Berilmu, Berakhlak Mulia & Berbudaya'}
+              {(schoolInfo.heroHighlight ?? (schoolInfo.mottoValues?.split(' ')[0] || 'Nenemo')) && (
+                <>
+                  {' '}
+                  <span className="text-blue-900">
+                    {schoolInfo.heroHighlight ?? (schoolInfo.mottoValues?.split(' ')[0] || 'Nenemo')}
+                  </span>
+                </>
+              )}
             </h1>
 
             {/* Body Prose */}
             <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mb-8">
-              Selamat datang di portal resmi <strong>{schoolInfo.name}</strong>. 
-              Kami berkomitmen menyelenggarakan pendidikan menengah pertama yang bermutu tinggi, memupuk 
-              kreativitas, sains, serta melestarikan kearifan lokal <em>{schoolInfo.mottoLocal}</em> di Provinsi Lampung.
+              {schoolInfo.heroDescription || (
+                <>
+                  Selamat datang di portal resmi <strong>{schoolInfo.name}</strong>. Kami berkomitmen
+                  menyelenggarakan pendidikan menengah pertama yang bermutu tinggi, memupuk kreativitas,
+                  sains, serta melestarikan kearifan lokal <em>{schoolInfo.mottoLocal}</em> di Provinsi Lampung.
+                </>
+              )}
             </p>
 
             {/* CTAs */}
@@ -89,20 +101,6 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPPDB, onNavigate }) => {
                 referrerPolicy="no-referrer"
                 className="w-full h-80 sm:h-96 lg:h-[460px] object-cover object-center group-hover:scale-[1.02] transition-transform duration-500"
               />
-
-              {/* Subtle Admin Quick Action to replace school building photo */}
-              <button
-                type="button"
-                onClick={() => {
-                  setAdminInitialTab('profil');
-                  setIsAdminOpen(true);
-                }}
-                title="Unggah foto sekolah baru untuk mengganti foto Gedung Terpadu"
-                className="absolute top-3.5 right-3.5 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950/65 hover:bg-blue-900/90 text-white text-xs font-medium backdrop-blur-xs border border-white/15 shadow-sm transition-colors cursor-pointer"
-              >
-                <Camera className="w-3.5 h-3.5 text-amber-300" />
-                <span>Ganti Foto Sekolah</span>
-              </button>
               
               {/* Measured contrast scrim overlay for typography legibility */}
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/20 to-transparent flex flex-col justify-end p-6 sm:p-7 text-white pointer-events-none">

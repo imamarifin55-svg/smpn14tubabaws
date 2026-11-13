@@ -4,11 +4,19 @@ import {
   doc,
   setDoc,
   deleteDoc,
-  updateDoc,
+  getDoc,
   onSnapshot,
   writeBatch
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import {
+  db,
+  auth,
+  signInWithGoogleAdmin,
+  signOutFirebase,
+  handleFirestoreError,
+  OperationType
+} from '../firebase';
 import {
   SCHOOL_INFO as DEFAULT_SCHOOL_INFO,
   INITIAL_TEACHERS,
@@ -17,12 +25,14 @@ import {
   INITIAL_APPLICANTS,
   INITIAL_STUDENTS,
   INITIAL_MORNING_ACTIVITIES,
+  SCHOOL_EXTRAS,
   Teacher,
   ActivityPhoto,
   Announcement,
   PPDBApplicant,
   Student,
-  MorningActivity
+  MorningActivity,
+  ExtracurricularItem
 } from '../data/schoolData';
 
 export type SchoolInfoType = typeof DEFAULT_SCHOOL_INFO;
@@ -40,6 +50,10 @@ interface SchoolDataContextType {
   updateStudent: (id: string, updated: Partial<Student>) => Promise<void>;
   deleteStudent: (id: string) => Promise<void>;
   importStudents: (newStudents: Student[]) => Promise<void>;
+  extracurriculars: ExtracurricularItem[];
+  addExtracurricular: (item: ExtracurricularItem) => Promise<void>;
+  updateExtracurricular: (id: string, updated: Partial<ExtracurricularItem>) => Promise<void>;
+  deleteExtracurricular: (id: string) => Promise<void>;
   activities: ActivityPhoto[];
   addActivity: (activity: ActivityPhoto) => Promise<void>;
   deleteActivity: (id: string) => Promise<void>;
@@ -55,12 +69,32 @@ interface SchoolDataContextType {
   updateApplicantStatus: (regNumber: string, status: PPDBApplicant['status'], notes?: string) => Promise<void>;
   isAdminOpen: boolean;
   setIsAdminOpen: (open: boolean) => void;
-  adminInitialTab?: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb';
-  setAdminInitialTab: (tab: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb') => void;
+  isAdminAuthenticated: boolean;
+  isFirebaseAdmin: boolean;
+  firebaseUser: User | null;
+  cloudAuthError: string | null;
+  clearCloudAuthError: () => void;
+  loginAdmin: (username: string, password: string) => boolean;
+  loginWithGoogleAdmin: () => Promise<boolean>;
+  logoutAdmin: () => Promise<void>;
+  adminInitialTab?: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb';
+  setAdminInitialTab: (tab: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb') => void;
   resetToDefault: () => Promise<void>;
   isFirebaseConnected: boolean;
   syncStatus: 'synced' | 'syncing' | 'offline';
 }
+
+function stripUndefined<T extends object>(obj: T): T {
+  const result: Record<string, unknown> = {};
+  Object.entries(obj as Record<string, unknown>).forEach(([key, value]) => {
+    if (value !== undefined) {
+      result[key] = value;
+    }
+  });
+  return result as T;
+}
+
+const BOOTSTRAPPED_ADMIN_EMAIL = 'imamarifin55@admin.smp.belajar.id';
 
 const SchoolDataContext = createContext<SchoolDataContextType | undefined>(undefined);
 
@@ -149,10 +183,151 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return INITIAL_MORNING_ACTIVITIES;
   });
 
+  const [extracurriculars, setExtracurriculars] = useState<ExtracurricularItem[]>(() => {
+    const saved = localStorage.getItem('smpn14_extracurriculars');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return SCHOOL_EXTRAS;
+      }
+    }
+    return SCHOOL_EXTRAS;
+  });
+
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [adminInitialTab, setAdminInitialTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb'>('profil');
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('smpn14_admin_auth') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [isFirebaseAdmin, setIsFirebaseAdmin] = useState(false);
+  const [cloudAuthError, setCloudAuthError] = useState<string | null>(null);
+  const [adminInitialTab, setAdminInitialTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb'>('profil');
   const [isFirebaseConnected, setIsFirebaseConnected] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('synced');
+
+  const clearCloudAuthError = () => setCloudAuthError(null);
+
+  const checkUserAdminRole = async (user: User | null): Promise<boolean> => {
+    if (!user) return false;
+    if (user.email === BOOTSTRAPPED_ADMIN_EMAIL && user.emailVerified) {
+      return true;
+    }
+    try {
+      const adminSnap = await getDoc(doc(db, 'admins', user.uid));
+      return adminSnap.exists();
+    } catch {
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, async (user) => {
+      setFirebaseUser(user);
+      if (!user) {
+        setIsFirebaseAdmin(false);
+        return;
+      }
+      const allowed = await checkUserAdminRole(user);
+      setIsFirebaseAdmin(allowed);
+      if (allowed) {
+        setIsAdminAuthenticated(true);
+        setCloudAuthError(null);
+        try {
+          sessionStorage.setItem('smpn14_admin_auth', 'true');
+        } catch {
+          // Ignore storage restrictions
+        }
+      }
+    });
+    return () => unsubAuth();
+  }, []);
+
+  const reportFirestoreWriteError = (err: unknown, op: OperationType, path: string) => {
+    const message = err instanceof Error ? err.message : String(err);
+    const isPermissionError =
+      message.toLowerCase().includes('permission') ||
+      message.toLowerCase().includes('insufficient');
+    if (isPermissionError) {
+      try {
+        handleFirestoreError(err, op, path);
+      } catch {
+        // Structured error logged via handleFirestoreError
+      }
+      setCloudAuthError(
+        'Perubahan tersimpan di perangkat ini, namun penulisan ke Cloud Firestore membutuhkan verifikasi Akun Google Admin (imamarifin55@admin.smp.belajar.id).'
+      );
+    } else {
+      console.warn(`Firestore ${op} (${path}) warning:`, err);
+    }
+    setSyncStatus('offline');
+  };
+
+  const loginAdmin = (username: string, password: string): boolean => {
+    if (username.trim() === 'administrator' && password === 'administrator') {
+      setIsAdminAuthenticated(true);
+      try {
+        sessionStorage.setItem('smpn14_admin_auth', 'true');
+      } catch {
+        // Ignore storage restrictions
+      }
+      return true;
+    }
+    return false;
+  };
+
+  const loginWithGoogleAdmin = async (): Promise<boolean> => {
+    setCloudAuthError(null);
+    try {
+      const cred = await signInWithGoogleAdmin();
+      const allowed = await checkUserAdminRole(cred.user);
+      if (!allowed) {
+        await signOutFirebase();
+        setIsFirebaseAdmin(false);
+        setCloudAuthError(
+          `Akun Google (${cred.user.email || 'tidak dikenal'}) tidak memiliki hak akses Administrator. Gunakan akun ${BOOTSTRAPPED_ADMIN_EMAIL}.`
+        );
+        return false;
+      }
+      setFirebaseUser(cred.user);
+      setIsFirebaseAdmin(true);
+      setIsAdminAuthenticated(true);
+      setSyncStatus('synced');
+      try {
+        sessionStorage.setItem('smpn14_admin_auth', 'true');
+      } catch {
+        // Ignore storage restrictions
+      }
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!message.includes('popup-closed-by-user')) {
+        setCloudAuthError('Gagal memverifikasi Google Admin. Pastikan popup browser diizinkan dan coba lagi.');
+      }
+      return false;
+    }
+  };
+
+  const logoutAdmin = async () => {
+    setIsAdminAuthenticated(false);
+    setIsFirebaseAdmin(false);
+    setCloudAuthError(null);
+    setIsAdminOpen(false);
+    try {
+      sessionStorage.removeItem('smpn14_admin_auth');
+    } catch {
+      // Ignore storage restrictions
+    }
+    try {
+      await signOutFirebase();
+    } catch {
+      // Ignore sign-out errors if already signed out
+    }
+  };
 
   // Local storage backups
   useEffect(() => {
@@ -162,6 +337,10 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     localStorage.setItem('smpn14_students', JSON.stringify(students));
   }, [students]);
+
+  useEffect(() => {
+    localStorage.setItem('smpn14_extracurriculars', JSON.stringify(extracurriculars));
+  }, [extracurriculars]);
 
   useEffect(() => {
     localStorage.setItem('smpn14_teachers', JSON.stringify(teachers));
@@ -310,6 +489,24 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
     );
 
+    // 8. Extracurriculars Listener
+    const unsubExtracurriculars = onSnapshot(
+      collection(db, 'ekstrakurikuler'),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: ExtracurricularItem[] = [];
+          snapshot.forEach((d) => list.push(d.data() as ExtracurricularItem));
+          setExtracurriculars(list);
+          localStorage.setItem('smpn14_extracurriculars', JSON.stringify(list));
+          setIsFirebaseConnected(true);
+        }
+      },
+      (error) => {
+        console.warn('Extracurriculars onSnapshot warning:', error);
+        setIsFirebaseConnected(false);
+      }
+    );
+
     return () => {
       unsubSchoolInfo();
       unsubTeachers();
@@ -318,15 +515,16 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       unsubActivities();
       unsubApplicants();
       unsubMorningActivities();
+      unsubExtracurriculars();
     };
   }, []);
 
   // Update School Info
   const updateSchoolInfo = async (info: SchoolInfoType) => {
-    const nextInfo: SchoolInfoType = {
+    const nextInfo = stripUndefined({
       ...info,
       updatedAt: new Date().toISOString()
-    } as SchoolInfoType;
+    }) as SchoolInfoType;
 
     setSchoolInfo(nextInfo);
     localStorage.setItem('smpn14_school_info', JSON.stringify(nextInfo));
@@ -338,46 +536,45 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
       await setDoc(doc(db, 'school_info', 'main'), nextInfo);
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (message.toLowerCase().includes('permission') || message.toLowerCase().includes('insufficient')) {
-        handleFirestoreError(err, OperationType.WRITE, 'school_info/main');
-      }
-      console.warn('Firestore updateSchoolInfo warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.WRITE, 'school_info/main');
     }
   };
 
   // Teachers CRUD
   const addTeacher = async (teacher: Teacher) => {
+    const clean = stripUndefined(teacher);
     setTeachers((prev) => {
-      const updated = [teacher, ...prev.filter((t) => t.id !== teacher.id)];
+      const updated = [clean, ...prev.filter((t) => t.id !== clean.id)];
       localStorage.setItem('smpn14_teachers', JSON.stringify(updated));
       return updated;
     });
     setSyncStatus('syncing');
     try {
-      await setDoc(doc(db, 'teachers', teacher.id), teacher);
+      await setDoc(doc(db, 'teachers', clean.id), clean);
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore addTeacher warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.WRITE, `teachers/${clean.id}`);
     }
   };
 
   const updateTeacher = async (id: string, updated: Partial<Teacher>) => {
+    const existingItem = teachers.find((t) => t.id === id);
+    const merged = stripUndefined({ ...(existingItem || {}), ...updated, id }) as Teacher;
     setTeachers((prev) => {
-      const newList = prev.map((t) => (t.id === id ? { ...t, ...updated } : t));
+      const newList = prev.map((t) => (t.id === id ? merged : t));
       localStorage.setItem('smpn14_teachers', JSON.stringify(newList));
       return newList;
     });
     setSyncStatus('syncing');
     try {
-      await updateDoc(doc(db, 'teachers', id), updated);
+      await setDoc(doc(db, 'teachers', id), merged);
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore updateTeacher warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.UPDATE, `teachers/${id}`);
     }
   };
 
@@ -391,19 +588,20 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     try {
       await deleteDoc(doc(db, 'teachers', id));
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore deleteTeacher warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.DELETE, `teachers/${id}`);
     }
   };
 
   const importTeachers = async (newTeachers: Teacher[]) => {
+    const cleanList = newTeachers.map((t) => stripUndefined(t));
     let combined: Teacher[] = [];
     setTeachers((prev) => {
       const existingMap = new Map(
         prev.map((t) => [t.nip && t.nip !== '-' ? t.nip : t.name.toLowerCase(), t])
       );
-      newTeachers.forEach((nt) => {
+      cleanList.forEach((nt) => {
         const key = nt.nip && nt.nip !== '-' ? nt.nip : nt.name.toLowerCase();
         existingMap.set(key, nt);
       });
@@ -415,31 +613,32 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setSyncStatus('syncing');
     try {
       const batch = writeBatch(db);
-      newTeachers.forEach((t) => {
+      cleanList.forEach((t) => {
         batch.set(doc(db, 'teachers', t.id), t);
       });
       await batch.commit();
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore importTeachers warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.WRITE, 'teachers/batch');
     }
   };
 
   // Activities CRUD
   const addActivity = async (activity: ActivityPhoto) => {
+    const clean = stripUndefined(activity);
     setActivities((prev) => {
-      const updated = [activity, ...prev.filter((a) => a.id !== activity.id)];
+      const updated = [clean, ...prev.filter((a) => a.id !== clean.id)];
       localStorage.setItem('smpn14_activities', JSON.stringify(updated));
       return updated;
     });
     setSyncStatus('syncing');
     try {
-      await setDoc(doc(db, 'activities', activity.id), activity);
+      await setDoc(doc(db, 'activities', clean.id), clean);
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore addActivity warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.WRITE, `activities/${clean.id}`);
     }
   };
 
@@ -453,42 +652,45 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     try {
       await deleteDoc(doc(db, 'activities', id));
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore deleteActivity warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.DELETE, `activities/${id}`);
     }
   };
 
   // Morning Activities (Kegiatan Pagi) CRUD
   const addMorningActivity = async (item: MorningActivity) => {
+    const clean = stripUndefined(item);
     setMorningActivities((prev) => {
-      const updated = [item, ...prev.filter((m) => m.id !== item.id)];
+      const updated = [clean, ...prev.filter((m) => m.id !== clean.id)];
       localStorage.setItem('smpn14_morning_activities', JSON.stringify(updated));
       return updated;
     });
     setSyncStatus('syncing');
     try {
-      await setDoc(doc(db, 'kegiatan_pagi', item.id), item);
+      await setDoc(doc(db, 'kegiatan_pagi', clean.id), clean);
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore addMorningActivity warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.WRITE, `kegiatan_pagi/${clean.id}`);
     }
   };
 
   const updateMorningActivity = async (id: string, updated: Partial<MorningActivity>) => {
+    const existingItem = morningActivities.find((m) => m.id === id);
+    const merged = stripUndefined({ ...(existingItem || {}), ...updated, id }) as MorningActivity;
     setMorningActivities((prev) => {
-      const newList = prev.map((m) => (m.id === id ? { ...m, ...updated } : m));
+      const newList = prev.map((m) => (m.id === id ? merged : m));
       localStorage.setItem('smpn14_morning_activities', JSON.stringify(newList));
       return newList;
     });
     setSyncStatus('syncing');
     try {
-      await updateDoc(doc(db, 'kegiatan_pagi', id), updated);
+      await setDoc(doc(db, 'kegiatan_pagi', id), merged);
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore updateMorningActivity warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.UPDATE, `kegiatan_pagi/${id}`);
     }
   };
 
@@ -502,26 +704,27 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     try {
       await deleteDoc(doc(db, 'kegiatan_pagi', id));
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore deleteMorningActivity warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.DELETE, `kegiatan_pagi/${id}`);
     }
   };
 
   // Announcements CRUD
   const addAnnouncement = async (announcement: Announcement) => {
+    const clean = stripUndefined(announcement);
     setAnnouncements((prev) => {
-      const updated = [announcement, ...prev.filter((a) => a.id !== announcement.id)];
+      const updated = [clean, ...prev.filter((a) => a.id !== clean.id)];
       localStorage.setItem('smpn14_announcements', JSON.stringify(updated));
       return updated;
     });
     setSyncStatus('syncing');
     try {
-      await setDoc(doc(db, 'announcements', announcement.id), announcement);
+      await setDoc(doc(db, 'announcements', clean.id), clean);
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore addAnnouncement warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.WRITE, `announcements/${clean.id}`);
     }
   };
 
@@ -535,26 +738,26 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     try {
       await deleteDoc(doc(db, 'announcements', id));
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore deleteAnnouncement warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.DELETE, `announcements/${id}`);
     }
   };
 
   // PPDB Applicants CRUD
   const addApplicant = async (applicant: PPDBApplicant) => {
+    const clean = stripUndefined(applicant);
     setApplicants((prev) => {
-      const updated = [applicant, ...prev.filter((a) => a.registrationNumber !== applicant.registrationNumber)];
+      const updated = [clean, ...prev.filter((a) => a.registrationNumber !== clean.registrationNumber)];
       localStorage.setItem('smpn14_ppdb_applicants', JSON.stringify(updated));
       return updated;
     });
     setSyncStatus('syncing');
     try {
-      await setDoc(doc(db, 'ppdb_applicants', applicant.registrationNumber), applicant);
+      await setDoc(doc(db, 'ppdb_applicants', clean.registrationNumber), clean);
       setSyncStatus('synced');
     } catch (err) {
-      console.warn('Firestore addApplicant warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.CREATE, `ppdb_applicants/${clean.registrationNumber}`);
     }
   };
 
@@ -563,62 +766,64 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     status: PPDBApplicant['status'],
     notes?: string
   ) => {
+    const existingItem = applicants.find((a) => a.registrationNumber === regNumber);
+    const merged = stripUndefined({
+      ...(existingItem || {}),
+      registrationNumber: regNumber,
+      status,
+      ...(notes ? { notes } : {})
+    }) as PPDBApplicant;
+
     setApplicants((prev) => {
       const updated = prev.map((app) =>
-        app.registrationNumber === regNumber
-          ? {
-              ...app,
-              status,
-              ...(notes ? { notes } : {})
-            }
-          : app
+        app.registrationNumber === regNumber ? merged : app
       );
       localStorage.setItem('smpn14_ppdb_applicants', JSON.stringify(updated));
       return updated;
     });
     setSyncStatus('syncing');
     try {
-      await updateDoc(doc(db, 'ppdb_applicants', regNumber), {
-        status,
-        ...(notes ? { notes } : {})
-      });
+      await setDoc(doc(db, 'ppdb_applicants', regNumber), merged);
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore updateApplicantStatus warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.UPDATE, `ppdb_applicants/${regNumber}`);
     }
   };
 
   // Students CRUD
   const addStudent = async (student: Student) => {
+    const clean = stripUndefined(student);
     setStudents((prev) => {
-      const updated = [student, ...prev.filter((s) => s.id !== student.id)];
+      const updated = [clean, ...prev.filter((s) => s.id !== clean.id)];
       localStorage.setItem('smpn14_students', JSON.stringify(updated));
       return updated;
     });
     setSyncStatus('syncing');
     try {
-      await setDoc(doc(db, 'students', student.id), student);
+      await setDoc(doc(db, 'students', clean.id), clean);
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore addStudent warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.WRITE, `students/${clean.id}`);
     }
   };
 
   const updateStudent = async (id: string, updated: Partial<Student>) => {
+    const existingItem = students.find((s) => s.id === id);
+    const merged = stripUndefined({ ...(existingItem || {}), ...updated, id }) as Student;
     setStudents((prev) => {
-      const newList = prev.map((s) => (s.id === id ? { ...s, ...updated } : s));
+      const newList = prev.map((s) => (s.id === id ? merged : s));
       localStorage.setItem('smpn14_students', JSON.stringify(newList));
       return newList;
     });
     setSyncStatus('syncing');
     try {
-      await updateDoc(doc(db, 'students', id), updated);
+      await setDoc(doc(db, 'students', id), merged);
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore updateStudent warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.UPDATE, `students/${id}`);
     }
   };
 
@@ -632,17 +837,18 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     try {
       await deleteDoc(doc(db, 'students', id));
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore deleteStudent warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.DELETE, `students/${id}`);
     }
   };
 
   const importStudents = async (newStudents: Student[]) => {
+    const cleanList = newStudents.map((s) => stripUndefined(s));
     let combined: Student[] = [];
     setStudents((prev) => {
       const existingMap = new Map(prev.map((s) => [s.nisn, s]));
-      newStudents.forEach((ns) => {
+      cleanList.forEach((ns) => {
         existingMap.set(ns.nisn, ns);
       });
       combined = Array.from(existingMap.values());
@@ -653,14 +859,66 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setSyncStatus('syncing');
     try {
       const batch = writeBatch(db);
-      newStudents.forEach((s) => {
+      cleanList.forEach((s) => {
         batch.set(doc(db, 'students', s.id), s);
       });
       await batch.commit();
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Firestore importStudents warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.WRITE, 'students/batch');
+    }
+  };
+
+  // Extracurriculars CRUD
+  const addExtracurricular = async (item: ExtracurricularItem) => {
+    const clean = stripUndefined(item);
+    setExtracurriculars((prev) => {
+      const updated = [clean, ...prev.filter((e) => e.id !== clean.id)];
+      localStorage.setItem('smpn14_extracurriculars', JSON.stringify(updated));
+      return updated;
+    });
+    setSyncStatus('syncing');
+    try {
+      await setDoc(doc(db, 'ekstrakurikuler', clean.id), clean);
+      setSyncStatus('synced');
+      setCloudAuthError(null);
+    } catch (err) {
+      reportFirestoreWriteError(err, OperationType.WRITE, `ekstrakurikuler/${clean.id}`);
+    }
+  };
+
+  const updateExtracurricular = async (id: string, updated: Partial<ExtracurricularItem>) => {
+    const existingItem = extracurriculars.find((e) => e.id === id);
+    const merged = stripUndefined({ ...(existingItem || {}), ...updated, id }) as ExtracurricularItem;
+    setExtracurriculars((prev) => {
+      const newList = prev.map((e) => (e.id === id ? merged : e));
+      localStorage.setItem('smpn14_extracurriculars', JSON.stringify(newList));
+      return newList;
+    });
+    setSyncStatus('syncing');
+    try {
+      await setDoc(doc(db, 'ekstrakurikuler', id), merged);
+      setSyncStatus('synced');
+      setCloudAuthError(null);
+    } catch (err) {
+      reportFirestoreWriteError(err, OperationType.UPDATE, `ekstrakurikuler/${id}`);
+    }
+  };
+
+  const deleteExtracurricular = async (id: string) => {
+    setExtracurriculars((prev) => {
+      const filtered = prev.filter((e) => e.id !== id);
+      localStorage.setItem('smpn14_extracurriculars', JSON.stringify(filtered));
+      return filtered;
+    });
+    setSyncStatus('syncing');
+    try {
+      await deleteDoc(doc(db, 'ekstrakurikuler', id));
+      setSyncStatus('synced');
+      setCloudAuthError(null);
+    } catch (err) {
+      reportFirestoreWriteError(err, OperationType.DELETE, `ekstrakurikuler/${id}`);
     }
   };
 
@@ -668,6 +926,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setSchoolInfo(DEFAULT_SCHOOL_INFO);
     setTeachers(INITIAL_TEACHERS);
     setStudents(INITIAL_STUDENTS);
+    setExtracurriculars(SCHOOL_EXTRAS);
     setActivities(SCHOOL_ACTIVITIES);
     setMorningActivities(INITIAL_MORNING_ACTIVITIES);
     setAnnouncements(ANNOUNCEMENTS);
@@ -676,18 +935,19 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     try {
       const batch = writeBatch(db);
-      batch.set(doc(db, 'school_info', 'main'), DEFAULT_SCHOOL_INFO);
-      INITIAL_TEACHERS.forEach((t) => batch.set(doc(db, 'teachers', t.id), t));
-      INITIAL_STUDENTS.forEach((s) => batch.set(doc(db, 'students', s.id), s));
-      ANNOUNCEMENTS.forEach((a) => batch.set(doc(db, 'announcements', a.id), a));
-      SCHOOL_ACTIVITIES.forEach((ac) => batch.set(doc(db, 'activities', ac.id), ac));
-      INITIAL_MORNING_ACTIVITIES.forEach((ma) => batch.set(doc(db, 'kegiatan_pagi', ma.id), ma));
-      INITIAL_APPLICANTS.forEach((ap) => batch.set(doc(db, 'ppdb_applicants', ap.registrationNumber), ap));
+      batch.set(doc(db, 'school_info', 'main'), stripUndefined(DEFAULT_SCHOOL_INFO));
+      INITIAL_TEACHERS.forEach((t) => batch.set(doc(db, 'teachers', t.id), stripUndefined(t)));
+      INITIAL_STUDENTS.forEach((s) => batch.set(doc(db, 'students', s.id), stripUndefined(s)));
+      SCHOOL_EXTRAS.forEach((ek) => batch.set(doc(db, 'ekstrakurikuler', ek.id), stripUndefined(ek)));
+      ANNOUNCEMENTS.forEach((a) => batch.set(doc(db, 'announcements', a.id), stripUndefined(a)));
+      SCHOOL_ACTIVITIES.forEach((ac) => batch.set(doc(db, 'activities', ac.id), stripUndefined(ac)));
+      INITIAL_MORNING_ACTIVITIES.forEach((ma) => batch.set(doc(db, 'kegiatan_pagi', ma.id), stripUndefined(ma)));
+      INITIAL_APPLICANTS.forEach((ap) => batch.set(doc(db, 'ppdb_applicants', ap.registrationNumber), stripUndefined(ap)));
       await batch.commit();
       setSyncStatus('synced');
+      setCloudAuthError(null);
     } catch (err) {
-      console.warn('Reset sync warning:', err);
-      setSyncStatus('offline');
+      reportFirestoreWriteError(err, OperationType.WRITE, 'batch/resetToDefault');
     }
   };
 
@@ -706,6 +966,10 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         updateStudent,
         deleteStudent,
         importStudents,
+        extracurriculars,
+        addExtracurricular,
+        updateExtracurricular,
+        deleteExtracurricular,
         activities,
         addActivity,
         deleteActivity,
@@ -721,6 +985,14 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         updateApplicantStatus,
         isAdminOpen,
         setIsAdminOpen,
+        isAdminAuthenticated,
+        isFirebaseAdmin,
+        firebaseUser,
+        cloudAuthError,
+        clearCloudAuthError,
+        loginAdmin,
+        loginWithGoogleAdmin,
+        logoutAdmin,
         adminInitialTab,
         setAdminInitialTab,
         resetToDefault,

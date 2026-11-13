@@ -7,14 +7,12 @@ import {
   Clock,
   Send,
   CheckCircle2,
-  ExternalLink,
-  ShieldCheck,
-  Settings
+  ShieldCheck
 } from 'lucide-react';
 import { useSchoolData } from '../context/SchoolDataContext';
 
 export const Footer: React.FC = () => {
-  const { schoolInfo, setIsAdminOpen } = useSchoolData();
+  const { schoolInfo } = useSchoolData();
   const [quickContactMsg, setQuickContactMsg] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -124,6 +122,11 @@ export const Footer: React.FC = () => {
                 </a>
               </li>
               <li>
+                <a href="#ekstrakurikuler" className="text-slate-400 hover:text-white transition-colors">
+                  Ekstrakurikuler
+                </a>
+              </li>
+              <li>
                 <a href="#galeri" className="text-slate-400 hover:text-white transition-colors">
                   Galeri Foto
                 </a>
@@ -188,14 +191,6 @@ export const Footer: React.FC = () => {
             &copy; 2026 {schoolInfo.name}. Hak Cipta Dilindungi Undang-Undang.
           </div>
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setIsAdminOpen(true)}
-              className="inline-flex items-center gap-1 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span>Kelola Data Sekolah</span>
-            </button>
-            <span aria-hidden="true">·</span>
             <span className="flex items-center gap-1 text-slate-400">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
               <span>Portal Resmi</span>

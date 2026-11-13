@@ -8,8 +8,6 @@ import {
   GraduationCap,
   Filter,
   Download,
-  Upload,
-  Settings,
   ChevronRight,
   ShieldCheck,
   CheckCircle2,
@@ -20,7 +18,7 @@ import { useSchoolData } from '../context/SchoolDataContext';
 import { Student } from '../data/schoolData';
 
 export const StudentDirectory: React.FC = () => {
-  const { schoolInfo, students, setIsAdminOpen, setAdminInitialTab } = useSchoolData();
+  const { schoolInfo, students } = useSchoolData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrade, setSelectedGrade] = useState<'all' | 'VII' | 'VIII' | 'IX'>('all');
@@ -95,11 +93,6 @@ export const StudentDirectory: React.FC = () => {
     XLSX.writeFile(wb, `Data_Peserta_Didik_SMPN14_Tubaba_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const handleOpenAdminImport = () => {
-    setAdminInitialTab('peserta-didik');
-    setIsAdminOpen(true);
-  };
-
   return (
     <section id="peserta-didik" className="py-16 lg:py-24 bg-white border-t border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -130,15 +123,6 @@ export const StudentDirectory: React.FC = () => {
             >
               <Download className="w-4 h-4 text-emerald-700" />
               <span>Ekspor Excel (.xlsx)</span>
-            </button>
-
-            <button
-              onClick={handleOpenAdminImport}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-white bg-blue-900 hover:bg-blue-800 rounded-xl shadow-xs transition-colors cursor-pointer"
-              title="Buka panel admin untuk mengimpor file Excel"
-            >
-              <Upload className="w-4 h-4 text-amber-300" />
-              <span>Impor Data Siswa</span>
             </button>
           </div>
         </div>

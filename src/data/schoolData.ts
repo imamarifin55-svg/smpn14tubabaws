@@ -35,6 +35,15 @@ export interface MorningActivity {
   imageUrl?: string;
 }
 
+export interface ExtracurricularItem {
+  id: string;
+  name: string;
+  category: string;
+  schedule: string;
+  coach: string;
+  desc: string;
+}
+
 export interface Announcement {
   id: string;
   title: string;
@@ -259,6 +268,12 @@ export const SCHOOL_INFO = {
   ],
   mottoLocal: 'Ragem Sai Mangi Wawai',
   mottoValues: 'Nenemo (Nemen, Nedes, Nerimo)',
+  heroHeadline: 'Mendidik Generasi Berilmu, Berakhlak Mulia & Berbudaya',
+  heroHighlight: 'Nenemo',
+  heroDescription:
+    'Selamat datang di portal resmi SMP Negeri 14 Tulang Bawang Barat. Kami berkomitmen menyelenggarakan pendidikan menengah pertama yang bermutu tinggi, memupuk kreativitas, sains, serta melestarikan kearifan lokal Ragem Sai Mangi Wawai di Provinsi Lampung.',
+  topBarLabel: 'PENGUMUMAN PPDB:',
+  topBarText: 'Pendaftaran Peserta Didik Baru TA 2026/2027 telah dibuka secara daring',
   address: 'Kawasan Pendidikan Terpadu, Kec. Tulang Bawang Barat, Kab. Tulang Bawang Barat, Provinsi Lampung 34693',
   phone: '(0726) 782-194',
   whatsapp: '+62 821-7890-1414',
@@ -660,8 +675,9 @@ export const SCHOOL_FACILITIES = [
   }
 ];
 
-export const SCHOOL_EXTRAS = [
+export const SCHOOL_EXTRAS: ExtracurricularItem[] = [
   {
+    id: 'ekskul-1',
     name: 'Pramuka Gugus Depan 14.01 - 14.02',
     category: 'Wajib & Kepemimpinan',
     schedule: 'Jumat, 14.00 - 16.30 WIB',
@@ -669,6 +685,7 @@ export const SCHOOL_EXTRAS = [
     desc: 'Membentuk kemandirian, kecintaan alam, keterampilan pioneering, semapur, dan morse.'
   },
   {
+    id: 'ekskul-2',
     name: 'Sanggar Seni Tari & Musik Lampung',
     category: 'Seni Budaya',
     schedule: 'Rabu, 15.00 - 16.45 WIB',
@@ -676,6 +693,7 @@ export const SCHOOL_EXTRAS = [
     desc: 'Melatih olah tubuh tari tradisional (Sigeh Penguten, Bedana) serta musik cetik kulintang Lampung.'
   },
   {
+    id: 'ekskul-3',
     name: 'Palang Merah Remaja (PMR Madya)',
     category: 'Kemanusiaan',
     schedule: 'Kamis, 15.00 - 16.30 WIB',
@@ -683,6 +701,7 @@ export const SCHOOL_EXTRAS = [
     desc: 'Pelatihan pertolongan pertama, donor darah sukarela, evakuasi bencana, dan pola hidup bersih.'
   },
   {
+    id: 'ekskul-4',
     name: 'Tim Olahraga (Futsal & Bola Voli)',
     category: 'Olahraga Prestasi',
     schedule: 'Selasa & Sabtu, 15.30 - 17.30 WIB',
@@ -690,6 +709,7 @@ export const SCHOOL_EXTRAS = [
     desc: 'Pembinaan taktik, kekuatan fisik, stamina, dan kejuaraan turnamen tingkat antarpelajar se-provinsi.'
   },
   {
+    id: 'ekskul-5',
     name: 'Klub Sains & Olimpiade Matematika',
     category: 'Akademik Unggulan',
     schedule: 'Senin & Kamis, 14.30 - 16.00 WIB',
@@ -697,6 +717,7 @@ export const SCHOOL_EXTRAS = [
     desc: 'Pendalaman materi penalaran tinggi (HOTS), persiapan OSN tingkat kabupaten dan provinsi.'
   },
   {
+    id: 'ekskul-6',
     name: 'Rohani Islam (Rohis) & Tahfidz',
     category: 'Keagamaan',
     schedule: 'Senin - Kamis Ba\'da Ashar',
