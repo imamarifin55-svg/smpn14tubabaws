@@ -90,6 +90,7 @@ export const AdminPanel: React.FC = () => {
     clearCloudAuthError,
     loginAdmin,
     loginWithGoogleAdmin,
+    loginWithGoogleRedirect,
     logoutAdmin,
     adminInitialTab,
     resetToDefault,
@@ -97,6 +98,8 @@ export const AdminPanel: React.FC = () => {
     isFirebaseConnected,
     syncStatus
   } = useSchoolData();
+
+  const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
 
   const [activeTab, setActiveTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb'>('profil');
   const [successToast, setSuccessToast] = useState<string | null>(null);
@@ -366,27 +369,49 @@ export const AdminPanel: React.FC = () => {
             {cloudAuthError && (
               <div
                 role="alert"
-                className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] space-y-2"
+                className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] space-y-2.5"
               >
                 <div className="flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <span className="leading-snug">{cloudAuthError}</span>
                 </div>
-                {loginUsername.trim() === 'administrator' && loginPassword === 'administrator' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      loginAdmin(loginUsername, loginPassword);
-                      setLoginError(null);
-                      setLoginUsername('');
-                      setLoginPassword('');
-                      setShowLoginPassword(false);
-                    }}
-                    className="text-[11px] font-semibold text-blue-900 hover:underline cursor-pointer"
-                  >
-                    Tetap masuk dalam mode lokal (offline perangkat) →
-                  </button>
-                )}
+                <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                  {isInIframe ? (
+                    <a
+                      href={typeof window !== 'undefined' ? window.location.href : '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold rounded-lg text-[11px] transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Buka di Tab Browser Baru</span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => loginWithGoogleRedirect()}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold rounded-lg text-[11px] transition-colors cursor-pointer"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Login Google Metode Redirect</span>
+                    </button>
+                  )}
+                  {loginUsername.trim() === 'administrator' && loginPassword === 'administrator' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        loginAdmin(loginUsername, loginPassword);
+                        setLoginError(null);
+                        setLoginUsername('');
+                        setLoginPassword('');
+                        setShowLoginPassword(false);
+                      }}
+                      className="text-[11px] font-semibold text-blue-900 hover:underline cursor-pointer"
+                    >
+                      Tetap masuk mode lokal →
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1532,21 +1557,54 @@ export const AdminPanel: React.FC = () => {
                     </p>
                   </div>
                 </div>
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  {isInIframe && (
+                    <a
+                      href={typeof window !== 'undefined' ? window.location.href : '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-amber-300 font-semibold rounded-xl transition-colors whitespace-nowrap"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-blue-900" />
+                      <span>Buka di Tab Baru</span>
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    disabled={isGoogleLoginLoading}
+                    onClick={async () => {
+                      setIsGoogleLoginLoading(true);
+                      const ok = await loginWithGoogleAdmin();
+                      setIsGoogleLoginLoading(false);
+                      if (ok) {
+                        showSuccess('Akun Google Admin terverifikasi! Siap sinkronisasi ke Firestore.');
+                      }
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-semibold rounded-xl transition-colors cursor-pointer whitespace-nowrap disabled:opacity-60"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+                    <span>{isGoogleLoginLoading ? 'Memverifikasi...' : 'Hubungkan Google Admin'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {isFirebaseAdmin && cloudAuthError && (
+              <div
+                role="alert"
+                className="mb-6 bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start justify-between gap-3 text-xs text-rose-900"
+              >
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{cloudAuthError}</span>
+                </div>
                 <button
                   type="button"
-                  disabled={isGoogleLoginLoading}
-                  onClick={async () => {
-                    setIsGoogleLoginLoading(true);
-                    const ok = await loginWithGoogleAdmin();
-                    setIsGoogleLoginLoading(false);
-                    if (ok) {
-                      showSuccess('Akun Google Admin terverifikasi! Siap sinkronisasi ke Firestore.');
-                    }
-                  }}
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-semibold rounded-xl transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-60"
+                  onClick={clearCloudAuthError}
+                  className="p-1 text-rose-500 hover:text-rose-800 rounded-lg cursor-pointer shrink-0"
+                  aria-label="Tutup peringatan"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-                  <span>{isGoogleLoginLoading ? 'Memverifikasi...' : 'Hubungkan Google Admin'}</span>
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             )}

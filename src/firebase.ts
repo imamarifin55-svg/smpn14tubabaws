@@ -1,5 +1,12 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  signOut
+} from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -15,6 +22,8 @@ googleProvider.setCustomParameters({
 });
 
 export const signInWithGoogleAdmin = () => signInWithPopup(auth, googleProvider);
+export const signInWithGoogleAdminRedirect = () => signInWithRedirect(auth, googleProvider);
+export const checkGoogleRedirectResult = () => getRedirectResult(auth);
 export const signOutFirebase = () => signOut(auth);
 
 export enum OperationType {

@@ -13,6 +13,8 @@ import {
   db,
   auth,
   signInWithGoogleAdmin,
+  signInWithGoogleAdminRedirect,
+  checkGoogleRedirectResult,
   signOutFirebase,
   handleFirestoreError,
   OperationType
@@ -76,6 +78,7 @@ interface SchoolDataContextType {
   clearCloudAuthError: () => void;
   loginAdmin: (username: string, password: string) => boolean;
   loginWithGoogleAdmin: () => Promise<boolean>;
+  loginWithGoogleRedirect: () => Promise<void>;
   logoutAdmin: () => Promise<void>;
   adminInitialTab?: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb';
   setAdminInitialTab: (tab: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb') => void;
@@ -228,6 +231,39 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   useEffect(() => {
+    checkGoogleRedirectResult()
+      .then(async (result) => {
+        if (!result?.user) return;
+        const allowed = await checkUserAdminRole(result.user);
+        if (!allowed) {
+          await signOutFirebase();
+          setIsFirebaseAdmin(false);
+          setCloudAuthError(
+            `Akun Google (${result.user.email || 'tidak dikenal'}) bukan akun Administrator terdaftar. Gunakan akun ${BOOTSTRAPPED_ADMIN_EMAIL}.`
+          );
+          setIsAdminOpen(true);
+          return;
+        }
+        setFirebaseUser(result.user);
+        setIsFirebaseAdmin(true);
+        setIsAdminAuthenticated(true);
+        setCloudAuthError(null);
+        setIsAdminOpen(true);
+        try {
+          sessionStorage.setItem('smpn14_admin_auth', 'true');
+        } catch {
+          // Ignore storage restrictions
+        }
+      })
+      .catch((err) => {
+        const code = (err as { code?: string })?.code || '';
+        const message = err instanceof Error ? err.message : String(err);
+        if (code) {
+          setCloudAuthError(`Gagal memproses redirect login Google (${code}): ${message}`);
+          setIsAdminOpen(true);
+        }
+      });
+
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
       if (!user) {
@@ -261,9 +297,15 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       } catch {
         // Structured error logged via handleFirestoreError
       }
-      setCloudAuthError(
-        'Perubahan tersimpan di perangkat ini, namun penulisan ke Cloud Firestore membutuhkan verifikasi Akun Google Admin (imamarifin55@admin.smp.belajar.id).'
-      );
+      if (isFirebaseAdmin && auth.currentUser) {
+        setCloudAuthError(
+          `Penulisan ke Firestore (${path}) ditolak oleh aturan keamanan meski Google Admin sudah terhubung. Periksa apakah ukuran foto/file melebihi batas atau ada kolom wajib yang kosong.`
+        );
+      } else {
+        setCloudAuthError(
+          'Perubahan tersimpan di perangkat ini, namun penulisan ke Cloud Firestore membutuhkan verifikasi Akun Google Admin (imamarifin55@admin.smp.belajar.id).'
+        );
+      }
     } else {
       console.warn(`Firestore ${op} (${path}) warning:`, err);
     }
@@ -351,13 +393,33 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const loginWithGoogleAdmin = async (): Promise<boolean> => {
     setCloudAuthError(null);
     try {
+      // Reuse current Firebase session if already signed in as verified admin
+      if (auth.currentUser) {
+        const alreadyAllowed = await checkUserAdminRole(auth.currentUser);
+        if (alreadyAllowed) {
+          setFirebaseUser(auth.currentUser);
+          setIsFirebaseAdmin(true);
+          setIsAdminAuthenticated(true);
+          setSyncStatus('synced');
+          try {
+            sessionStorage.setItem('smpn14_admin_auth', 'true');
+          } catch {
+            // Ignore storage restrictions
+          }
+          if (hasPendingLocalChanges) {
+            await syncAllToCloud();
+          }
+          return true;
+        }
+      }
+
       const cred = await signInWithGoogleAdmin();
       const allowed = await checkUserAdminRole(cred.user);
       if (!allowed) {
         await signOutFirebase();
         setIsFirebaseAdmin(false);
         setCloudAuthError(
-          `Akun Google (${cred.user.email || 'tidak dikenal'}) tidak memiliki hak akses Administrator. Gunakan akun ${BOOTSTRAPPED_ADMIN_EMAIL}.`
+          `Akun Google (${cred.user.email || 'tidak dikenal'}) bukan akun Administrator terdaftar. Gunakan akun ${BOOTSTRAPPED_ADMIN_EMAIL}.`
         );
         return false;
       }
@@ -375,19 +437,47 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
       return true;
     } catch (err) {
+      const code = (err as { code?: string })?.code || '';
       const message = err instanceof Error ? err.message : String(err);
-      if (message.includes('popup-closed-by-user') || message.includes('cancelled-popup-request')) {
+      console.error('Google Admin Sign-In Error:', code, message, err);
+
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request' || message.includes('popup-closed-by-user')) {
         setCloudAuthError(
-          'Jendela verifikasi Google Admin ditutup sebelum selesai. Klik Masuk atau tombol Google Admin untuk menghubungkan kembali.'
+          'Jendela login Google ditutup sebelum proses selesai (auth/popup-closed-by-user). Jika jendela tertutup otomatis karena preview iframe atau kebijakan akun belajar.id, coba buka website di tab baru.'
         );
-      } else if (message.includes('popup-blocked')) {
+      } else if (code === 'auth/popup-blocked' || message.includes('popup-blocked')) {
         setCloudAuthError(
-          'Popup login Google diblokir oleh browser Anda. Mohon izinkan popup untuk situs ini lalu coba lagi.'
+          'Popup login Google diblokir oleh browser atau iframe preview (auth/popup-blocked). Izinkan popup atau buka website di tab baru.'
+        );
+      } else if (code === 'auth/unauthorized-domain' || message.includes('unauthorized-domain')) {
+        setCloudAuthError(
+          `Domain saat ini (${typeof window !== 'undefined' ? window.location.hostname : ''}) belum diizinkan di Firebase Auth (auth/unauthorized-domain).`
+        );
+      } else if (code === 'auth/operation-not-allowed' || message.includes('operation-not-allowed')) {
+        setCloudAuthError(
+          'Provider Google Login belum aktif di Firebase Console (auth/operation-not-allowed).'
+        );
+      } else if (code === 'auth/network-request-failed' || message.includes('network-request-failed')) {
+        setCloudAuthError(
+          'Koneksi ke server Google Auth gagal (auth/network-request-failed). Periksa koneksi internet atau pemblokir iklan.'
         );
       } else {
-        setCloudAuthError('Gagal memverifikasi Google Admin. Pastikan popup browser diizinkan dan coba lagi.');
+        setCloudAuthError(
+          `Gagal menghubungkan Google Admin (${code || 'unknown-error'}). Jika menggunakan akun @admin.smp.belajar.id di dalam iframe preview, silakan buka website di tab browser baru lalu coba masuk kembali.`
+        );
       }
       return false;
+    }
+  };
+
+  const loginWithGoogleRedirect = async (): Promise<void> => {
+    setCloudAuthError(null);
+    try {
+      await signInWithGoogleAdminRedirect();
+    } catch (err) {
+      const code = (err as { code?: string })?.code || '';
+      const message = err instanceof Error ? err.message : String(err);
+      setCloudAuthError(`Gagal mengarahkan ke login Google (${code || 'unknown-error'}): ${message}`);
     }
   };
 
@@ -1071,6 +1161,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         clearCloudAuthError,
         loginAdmin,
         loginWithGoogleAdmin,
+        loginWithGoogleRedirect,
         logoutAdmin,
         adminInitialTab,
         setAdminInitialTab,
