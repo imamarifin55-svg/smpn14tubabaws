@@ -93,6 +93,7 @@ export const AdminPanel: React.FC = () => {
     logoutAdmin,
     adminInitialTab,
     resetToDefault,
+    syncAllToCloud,
     isFirebaseConnected,
     syncStatus
   } = useSchoolData();
@@ -283,17 +284,35 @@ export const AdminPanel: React.FC = () => {
 
   if (!isAdminOpen) return null;
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const ok = loginAdmin(loginUsername, loginPassword);
-    if (!ok) {
+    if (loginUsername.trim() !== 'administrator' || loginPassword !== 'administrator') {
       setLoginError('Username atau password tidak sesuai. Silakan periksa kembali.');
       return;
     }
+
     setLoginError(null);
-    setLoginUsername('');
-    setLoginPassword('');
-    setShowLoginPassword(false);
+    clearCloudAuthError();
+
+    // If Firebase Google Admin is already verified, sign in directly
+    if (isFirebaseAdmin) {
+      loginAdmin(loginUsername, loginPassword);
+      setLoginUsername('');
+      setLoginPassword('');
+      setShowLoginPassword(false);
+      return;
+    }
+
+    // Connect directly to Firebase Auth + Cloud Firestore in one step
+    setIsGoogleLoginLoading(true);
+    const ok = await loginWithGoogleAdmin();
+    setIsGoogleLoginLoading(false);
+
+    if (ok) {
+      setLoginUsername('');
+      setLoginPassword('');
+      setShowLoginPassword(false);
+    }
   };
 
   if (!isAdminAuthenticated) {
@@ -317,6 +336,7 @@ export const AdminPanel: React.FC = () => {
               type="button"
               onClick={() => {
                 setLoginError(null);
+                clearCloudAuthError();
                 setLoginPassword('');
                 setIsAdminOpen(false);
               }}
@@ -330,7 +350,7 @@ export const AdminPanel: React.FC = () => {
           {/* Login Form */}
           <form onSubmit={handleLoginSubmit} className="p-6 space-y-4 text-xs">
             <p className="text-slate-600 leading-relaxed">
-              Silakan masuk menggunakan akun administrator untuk mengakses seluruh pengaturan profil, berita, galeri, data guru, siswa, dan PPDB.
+              Masuk dengan akun pengelola untuk langsung terhubung ke pengaturan website dan sinkronisasi Firebase Cloud Firestore.
             </p>
 
             {loginError && (
@@ -340,6 +360,33 @@ export const AdminPanel: React.FC = () => {
               >
                 <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                 <span className="font-medium leading-snug">{loginError}</span>
+              </div>
+            )}
+
+            {cloudAuthError && (
+              <div
+                role="alert"
+                className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] space-y-2"
+              >
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span className="leading-snug">{cloudAuthError}</span>
+                </div>
+                {loginUsername.trim() === 'administrator' && loginPassword === 'administrator' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loginAdmin(loginUsername, loginPassword);
+                      setLoginError(null);
+                      setLoginUsername('');
+                      setLoginPassword('');
+                      setShowLoginPassword(false);
+                    }}
+                    className="text-[11px] font-semibold text-blue-900 hover:underline cursor-pointer"
+                  >
+                    Tetap masuk dalam mode lokal (offline perangkat) →
+                  </button>
+                )}
               </div>
             )}
 
@@ -407,27 +454,19 @@ export const AdminPanel: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap"
+                disabled={isGoogleLoginLoading}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap disabled:opacity-60"
               >
                 <LogIn className="w-4 h-4 text-amber-300" />
-                <span>Masuk</span>
+                <span>{isGoogleLoginLoading ? 'Menghubungkan Firebase...' : 'Masuk & Hubungkan'}</span>
               </button>
             </div>
 
-            {/* Divider & Firebase Auth Google Admin Login */}
+            {/* Direct Firebase Auth Google Admin Login */}
             <div className="pt-3 border-t border-slate-100 space-y-2.5">
               <div className="text-[11px] text-center text-slate-500 font-medium">
-                atau verifikasi cloud Firebase Authentication
+                atau masuk langsung dengan Akun Google Admin
               </div>
-              {cloudAuthError && (
-                <div
-                  role="alert"
-                  className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px]"
-                >
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <span className="leading-snug">{cloudAuthError}</span>
-                </div>
-              )}
               <button
                 type="button"
                 disabled={isGoogleLoginLoading}
@@ -439,7 +478,7 @@ export const AdminPanel: React.FC = () => {
                   if (ok) {
                     setLoginUsername('');
                     setLoginPassword('');
-                    showSuccess('Login Google Admin terverifikasi!');
+                    setShowLoginPassword(false);
                   }
                 }}
                 className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-xl font-semibold text-xs transition-colors cursor-pointer disabled:opacity-60"
@@ -1454,9 +1493,11 @@ export const AdminPanel: React.FC = () => {
                   <button
                     onClick={async () => {
                       setIsCloudSyncing(true);
-                      await resetToDefault();
+                      const ok = await syncAllToCloud();
                       setIsCloudSyncing(false);
-                      showSuccess('Seluruh data awal berhasil disinkronkan ke Firebase Firestore!');
+                      if (ok) {
+                        showSuccess('Seluruh data website berhasil disinkronkan ke Firebase Firestore!');
+                      }
                     }}
                     disabled={isCloudSyncing}
                     className="flex items-center justify-center gap-1.5 w-full py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[10px] font-medium transition-colors cursor-pointer"

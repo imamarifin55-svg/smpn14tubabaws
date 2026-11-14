@@ -80,6 +80,7 @@ interface SchoolDataContextType {
   adminInitialTab?: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb';
   setAdminInitialTab: (tab: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb') => void;
   resetToDefault: () => Promise<void>;
+  syncAllToCloud: () => Promise<boolean>;
   isFirebaseConnected: boolean;
   syncStatus: 'synced' | 'syncing' | 'offline';
 }
@@ -206,6 +207,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [isFirebaseAdmin, setIsFirebaseAdmin] = useState(false);
   const [cloudAuthError, setCloudAuthError] = useState<string | null>(null);
+  const [hasPendingLocalChanges, setHasPendingLocalChanges] = useState(false);
   const [adminInitialTab, setAdminInitialTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb'>('profil');
   const [isFirebaseConnected, setIsFirebaseConnected] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('synced');
@@ -214,7 +216,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const checkUserAdminRole = async (user: User | null): Promise<boolean> => {
     if (!user) return false;
-    if (user.email === BOOTSTRAPPED_ADMIN_EMAIL && user.emailVerified) {
+    if ((user.email || '').toLowerCase() === BOOTSTRAPPED_ADMIN_EMAIL && user.emailVerified) {
       return true;
     }
     try {
@@ -253,6 +255,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       message.toLowerCase().includes('permission') ||
       message.toLowerCase().includes('insufficient');
     if (isPermissionError) {
+      setHasPendingLocalChanges(true);
       try {
         handleFirestoreError(err, op, path);
       } catch {
@@ -265,6 +268,71 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       console.warn(`Firestore ${op} (${path}) warning:`, err);
     }
     setSyncStatus('offline');
+  };
+
+  const commitChunkedWrites = async (
+    entries: Array<{ col: string; id: string; data: object }>
+  ) => {
+    const CHUNK_SIZE = 400;
+    for (let i = 0; i < entries.length; i += CHUNK_SIZE) {
+      const chunk = entries.slice(i, i + CHUNK_SIZE);
+      const batch = writeBatch(db);
+      chunk.forEach((entry) => {
+        batch.set(doc(db, entry.col, entry.id), entry.data);
+      });
+      await batch.commit();
+    }
+  };
+
+  const syncAllToCloud = async (): Promise<boolean> => {
+    setSyncStatus('syncing');
+    try {
+      const entries: Array<{ col: string; id: string; data: object }> = [
+        {
+          col: 'school_info',
+          id: 'main',
+          data: stripUndefined({
+            ...schoolInfo,
+            updatedAt: new Date().toISOString()
+          })
+        },
+        ...teachers.map((t) => ({ col: 'teachers', id: t.id, data: stripUndefined(t) })),
+        ...students.map((s) => ({ col: 'students', id: s.id, data: stripUndefined(s) })),
+        ...extracurriculars.map((ek) => ({
+          col: 'ekstrakurikuler',
+          id: ek.id,
+          data: stripUndefined(ek)
+        })),
+        ...announcements.map((a) => ({
+          col: 'announcements',
+          id: a.id,
+          data: stripUndefined(a)
+        })),
+        ...activities.map((ac) => ({
+          col: 'activities',
+          id: ac.id,
+          data: stripUndefined(ac)
+        })),
+        ...morningActivities.map((ma) => ({
+          col: 'kegiatan_pagi',
+          id: ma.id,
+          data: stripUndefined(ma)
+        })),
+        ...applicants.map((ap) => ({
+          col: 'ppdb_applicants',
+          id: ap.registrationNumber,
+          data: stripUndefined(ap)
+        }))
+      ];
+      await commitChunkedWrites(entries);
+      setSyncStatus('synced');
+      setHasPendingLocalChanges(false);
+      setCloudAuthError(null);
+      return true;
+    } catch (err) {
+      reportFirestoreWriteError(err, OperationType.WRITE, 'batch/syncAllToCloud');
+      return false;
+    }
   };
 
   const loginAdmin = (username: string, password: string): boolean => {
@@ -302,10 +370,21 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       } catch {
         // Ignore storage restrictions
       }
+      if (hasPendingLocalChanges) {
+        await syncAllToCloud();
+      }
       return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (!message.includes('popup-closed-by-user')) {
+      if (message.includes('popup-closed-by-user') || message.includes('cancelled-popup-request')) {
+        setCloudAuthError(
+          'Jendela verifikasi Google Admin ditutup sebelum selesai. Klik Masuk atau tombol Google Admin untuk menghubungkan kembali.'
+        );
+      } else if (message.includes('popup-blocked')) {
+        setCloudAuthError(
+          'Popup login Google diblokir oleh browser Anda. Mohon izinkan popup untuk situs ini lalu coba lagi.'
+        );
+      } else {
         setCloudAuthError('Gagal memverifikasi Google Admin. Pastikan popup browser diizinkan dan coba lagi.');
       }
       return false;
@@ -996,6 +1075,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         adminInitialTab,
         setAdminInitialTab,
         resetToDefault,
+        syncAllToCloud,
         isFirebaseConnected,
         syncStatus
       }}
