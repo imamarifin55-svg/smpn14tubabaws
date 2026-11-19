@@ -36,7 +36,8 @@ import {
   LogOut,
   Eye,
   EyeOff,
-  ShieldCheck
+  ShieldCheck,
+  Images
 } from 'lucide-react';
 import { useSchoolData } from '../context/SchoolDataContext';
 import {
@@ -45,7 +46,8 @@ import {
   Announcement,
   Student,
   MorningActivity,
-  ExtracurricularItem
+  ExtracurricularItem,
+  PurePhotoItem
 } from '../data/schoolData';
 import { compressImage } from '../utils/imageCompressor';
 
@@ -77,6 +79,9 @@ export const AdminPanel: React.FC = () => {
     addMorningActivity,
     updateMorningActivity,
     deleteMorningActivity,
+    purePhotos,
+    addPurePhoto,
+    deletePurePhoto,
     applicants,
     updateApplicantStatus,
     isAdminOpen,
@@ -93,7 +98,7 @@ export const AdminPanel: React.FC = () => {
     syncStatus
   } = useSchoolData();
 
-  const [activeTab, setActiveTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb'>('profil');
+  const [activeTab, setActiveTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'album-foto' | 'ppdb'>('profil');
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
@@ -274,6 +279,10 @@ export const AdminPanel: React.FC = () => {
     coach: '',
     desc: ''
   });
+
+  // Upload ref & state for Pure Photos (Foto Tanpa Keterangan)
+  const purePhotoInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingPurePhotos, setIsUploadingPurePhotos] = useState(false);
 
   if (!isAdminOpen) return null;
 
@@ -1137,6 +1146,43 @@ export const AdminPanel: React.FC = () => {
     showSuccess('Program Ekstrakurikuler baru berhasil ditambahkan & disinkronkan!');
   };
 
+  // 8. Pure Photos (Foto Tanpa Keterangan) Multi-Upload
+  const handlePurePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const imageFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (imageFiles.length === 0) {
+      alert('Mohon pilih file foto gambar (JPG, PNG, WebP).');
+      e.target.value = '';
+      return;
+    }
+
+    setIsUploadingPurePhotos(true);
+    let uploadedCount = 0;
+    try {
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        const base64 = await compressImage(file, 1200, 900, 0.82, 250000);
+        const item: PurePhotoItem = {
+          id: `foto-${Date.now()}-${i}`,
+          imageUrl: base64,
+          createdAt: new Date(Date.now() + i).toISOString()
+        };
+        await addPurePhoto(item);
+        uploadedCount++;
+      }
+      if (uploadedCount > 0) {
+        showSuccess(`${uploadedCount} foto berhasil diunggah ke menu Album Kegiatan!`);
+      }
+    } catch {
+      alert('Sebagian atau seluruh foto gagal diproses.');
+    } finally {
+      setIsUploadingPurePhotos(false);
+      e.target.value = '';
+    }
+  };
+
   // Filtered students inside admin table
   const filteredAdminStudents = students.filter((s) => {
     const matchSearch =
@@ -1331,7 +1377,7 @@ export const AdminPanel: React.FC = () => {
               >
                 <div className="flex items-center gap-3 truncate">
                   <Camera className="w-4 h-4 shrink-0" />
-                  <span className="truncate">Galeri Foto</span>
+                  <span className="truncate">Dokumentasi Kegiatan</span>
                 </div>
                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
                   {activities.length}
@@ -1352,6 +1398,23 @@ export const AdminPanel: React.FC = () => {
                 </div>
                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
                   {morningActivities.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('album-foto')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
+                  activeTab === 'album-foto'
+                    ? 'bg-blue-900 text-white shadow-xs font-bold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <Images className="w-4 h-4 shrink-0 text-amber-400" />
+                  <span className="truncate">Album Kegiatan</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
+                  {purePhotos.length}
                 </span>
               </button>
 
@@ -3500,6 +3563,91 @@ export const AdminPanel: React.FC = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: ALBUM KEGIATAN */}
+            {activeTab === 'album-foto' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-slate-200 pb-3">
+                  <h3 className="text-lg font-bold text-slate-900">Kelola Album Kegiatan</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Unggah foto langsung tanpa perlu mengisi judul atau narasi keterangan. Bisa memilih lebih dari satu foto sekaligus.
+                  </p>
+                </div>
+
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-900 flex items-center justify-center mx-auto border border-blue-100">
+                    <Images className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-slate-900">Unggah Foto Album Kegiatan</h4>
+                    <p className="text-xs text-slate-500 max-w-md mx-auto">
+                      Pilih satu atau beberapa foto (JPG, PNG, WebP). Foto akan langsung tampil di menu Album Kegiatan.
+                    </p>
+                  </div>
+                  <div className="pt-1">
+                    <label
+                      htmlFor="pure-photo-multi-input"
+                      className={`inline-flex items-center gap-2 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold rounded-xl shadow-xs cursor-pointer transition-colors ${
+                        isUploadingPurePhotos ? 'opacity-60 pointer-events-none' : ''
+                      }`}
+                    >
+                      <Upload className="w-4 h-4 text-amber-300" />
+                      <span>{isUploadingPurePhotos ? 'Mengunggah Foto...' : 'Pilih & Unggah Foto'}</span>
+                    </label>
+                    <input
+                      ref={purePhotoInputRef}
+                      type="file"
+                      id="pure-photo-multi-input"
+                      accept="image/*"
+                      multiple
+                      onChange={handlePurePhotoUpload}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Daftar Foto Tampil ({purePhotos.length})
+                  </h4>
+
+                  {purePhotos.length === 0 ? (
+                    <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-xs text-slate-500">
+                      Belum ada foto yang diunggah.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {purePhotos.map((photo, index) => (
+                        <div
+                          key={photo.id}
+                          className="group relative aspect-4/3 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-xs"
+                        >
+                          <img
+                            src={photo.imageUrl}
+                            alt={`Album foto ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm('Hapus foto ini dari album?')) {
+                                deletePurePhoto(photo.id);
+                                showSuccess('Foto berhasil dihapus.');
+                              }
+                            }}
+                            className="absolute top-2 right-2 p-1.5 rounded-lg bg-slate-950/75 hover:bg-rose-600 text-white transition-colors cursor-pointer shadow-sm"
+                            title="Hapus foto"
+                            aria-label="Hapus foto"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

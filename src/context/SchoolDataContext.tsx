@@ -21,13 +21,15 @@ import {
   INITIAL_STUDENTS,
   INITIAL_MORNING_ACTIVITIES,
   SCHOOL_EXTRAS,
+  INITIAL_PURE_PHOTOS,
   Teacher,
   ActivityPhoto,
   Announcement,
   PPDBApplicant,
   Student,
   MorningActivity,
-  ExtracurricularItem
+  ExtracurricularItem,
+  PurePhotoItem
 } from '../data/schoolData';
 
 export type SchoolInfoType = typeof DEFAULT_SCHOOL_INFO;
@@ -56,6 +58,9 @@ interface SchoolDataContextType {
   addMorningActivity: (item: MorningActivity) => Promise<void>;
   updateMorningActivity: (id: string, updated: Partial<MorningActivity>) => Promise<void>;
   deleteMorningActivity: (id: string) => Promise<void>;
+  purePhotos: PurePhotoItem[];
+  addPurePhoto: (photo: PurePhotoItem) => Promise<void>;
+  deletePurePhoto: (id: string) => Promise<void>;
   announcements: Announcement[];
   addAnnouncement: (announcement: Announcement) => Promise<void>;
   deleteAnnouncement: (id: string) => Promise<void>;
@@ -69,8 +74,8 @@ interface SchoolDataContextType {
   clearCloudAuthError: () => void;
   loginAdmin: (username: string, password: string) => boolean;
   logoutAdmin: () => void;
-  adminInitialTab?: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb';
-  setAdminInitialTab: (tab: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb') => void;
+  adminInitialTab?: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'album-foto' | 'ppdb';
+  setAdminInitialTab: (tab: 'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'album-foto' | 'ppdb') => void;
   resetToDefault: () => Promise<void>;
   syncAllToCloud: () => Promise<boolean>;
   isFirebaseConnected: boolean;
@@ -186,6 +191,18 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return SCHOOL_EXTRAS;
   });
 
+  const [purePhotos, setPurePhotos] = useState<PurePhotoItem[]>(() => {
+    const saved = localStorage.getItem('smpn14_pure_photos');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return INITIAL_PURE_PHOTOS;
+      }
+    }
+    return INITIAL_PURE_PHOTOS;
+  });
+
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
     try {
@@ -196,7 +213,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   });
   const [cloudAuthError, setCloudAuthError] = useState<string | null>(null);
   const [hasPendingLocalChanges, setHasPendingLocalChanges] = useState(false);
-  const [adminInitialTab, setAdminInitialTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb'>('profil');
+  const [adminInitialTab, setAdminInitialTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'album-foto' | 'ppdb'>('profil');
   const [isFirebaseConnected, setIsFirebaseConnected] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('synced');
 
@@ -270,6 +287,11 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           col: 'kegiatan_pagi',
           id: ma.id,
           data: stripUndefined(ma)
+        })),
+        ...purePhotos.map((fp) => ({
+          col: 'foto_galeri',
+          id: fp.id,
+          data: stripUndefined(fp)
         })),
         ...applicants.map((ap) => ({
           col: 'ppdb_applicants',
@@ -348,6 +370,10 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     localStorage.setItem('smpn14_ppdb_applicants', JSON.stringify(applicants));
   }, [applicants]);
+
+  useEffect(() => {
+    localStorage.setItem('smpn14_pure_photos', JSON.stringify(purePhotos));
+  }, [purePhotos]);
 
   // Realtime Listeners with Firestore onSnapshot
   useEffect(() => {
@@ -494,6 +520,25 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
     );
 
+    // 9. Pure Photos Without Captions Listener
+    const unsubPurePhotos = onSnapshot(
+      collection(db, 'foto_galeri'),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: PurePhotoItem[] = [];
+          snapshot.forEach((d) => list.push(d.data() as PurePhotoItem));
+          list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+          setPurePhotos(list);
+          localStorage.setItem('smpn14_pure_photos', JSON.stringify(list));
+          setIsFirebaseConnected(true);
+        }
+      },
+      (error) => {
+        console.warn('Pure photos onSnapshot warning:', error);
+        setIsFirebaseConnected(false);
+      }
+    );
+
     return () => {
       unsubSchoolInfo();
       unsubTeachers();
@@ -503,6 +548,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       unsubApplicants();
       unsubMorningActivities();
       unsubExtracurriculars();
+      unsubPurePhotos();
     };
   }, []);
 
@@ -909,6 +955,40 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
+  // Pure Photos (Foto Tanpa Keterangan) CRUD
+  const addPurePhoto = async (photo: PurePhotoItem) => {
+    const clean = stripUndefined(photo);
+    setPurePhotos((prev) => {
+      const updated = [clean, ...prev.filter((p) => p.id !== clean.id)];
+      localStorage.setItem('smpn14_pure_photos', JSON.stringify(updated));
+      return updated;
+    });
+    setSyncStatus('syncing');
+    try {
+      await setDoc(doc(db, 'foto_galeri', clean.id), clean);
+      setSyncStatus('synced');
+      setCloudAuthError(null);
+    } catch (err) {
+      reportFirestoreWriteError(err, OperationType.WRITE, `foto_galeri/${clean.id}`);
+    }
+  };
+
+  const deletePurePhoto = async (id: string) => {
+    setPurePhotos((prev) => {
+      const filtered = prev.filter((p) => p.id !== id);
+      localStorage.setItem('smpn14_pure_photos', JSON.stringify(filtered));
+      return filtered;
+    });
+    setSyncStatus('syncing');
+    try {
+      await deleteDoc(doc(db, 'foto_galeri', id));
+      setSyncStatus('synced');
+      setCloudAuthError(null);
+    } catch (err) {
+      reportFirestoreWriteError(err, OperationType.DELETE, `foto_galeri/${id}`);
+    }
+  };
+
   const resetToDefault = async () => {
     setSchoolInfo(DEFAULT_SCHOOL_INFO);
     setTeachers(INITIAL_TEACHERS);
@@ -916,6 +996,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setExtracurriculars(SCHOOL_EXTRAS);
     setActivities(SCHOOL_ACTIVITIES);
     setMorningActivities(INITIAL_MORNING_ACTIVITIES);
+    setPurePhotos(INITIAL_PURE_PHOTOS);
     setAnnouncements(ANNOUNCEMENTS);
     setApplicants(INITIAL_APPLICANTS);
     setSyncStatus('syncing');
@@ -929,6 +1010,7 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       ANNOUNCEMENTS.forEach((a) => batch.set(doc(db, 'announcements', a.id), stripUndefined(a)));
       SCHOOL_ACTIVITIES.forEach((ac) => batch.set(doc(db, 'activities', ac.id), stripUndefined(ac)));
       INITIAL_MORNING_ACTIVITIES.forEach((ma) => batch.set(doc(db, 'kegiatan_pagi', ma.id), stripUndefined(ma)));
+      INITIAL_PURE_PHOTOS.forEach((fp) => batch.set(doc(db, 'foto_galeri', fp.id), stripUndefined(fp)));
       INITIAL_APPLICANTS.forEach((ap) => batch.set(doc(db, 'ppdb_applicants', ap.registrationNumber), stripUndefined(ap)));
       await batch.commit();
       setSyncStatus('synced');
@@ -964,6 +1046,9 @@ export const SchoolDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         addMorningActivity,
         updateMorningActivity,
         deleteMorningActivity,
+        purePhotos,
+        addPurePhoto,
+        deletePurePhoto,
         announcements,
         addAnnouncement,
         deleteAnnouncement,

@@ -117,6 +117,14 @@ service cloud.firestore {
         data.status in ['Terverifikasi', 'Menunggu Berkas', 'Lolos Seleksi', 'Cadangan'];
     }
 
+    function isValidPurePhoto(data) {
+      return data.keys().hasAll(['id', 'imageUrl']) &&
+        data.keys().hasOnly(['id', 'imageUrl', 'createdAt']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.imageUrl is string && data.imageUrl.size() > 0 && data.imageUrl.size() <= 900000 &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50));
+    }
+
     // --- Default Deny Catch-All ---
     match /{document=**} {
       allow read, write: if false;
@@ -181,6 +189,15 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if isValidId(ekskulId) && isValidExtracurricular(incoming());
       allow delete: if isValidId(ekskulId);
+    }
+
+    // --- Pure Photos Without Captions / Foto Galeri (Schema-Validated Direct Sync) ---
+    match /foto_galeri/{photoId} {
+      allow read: if true;
+      allow create, update: if isValidId(photoId) &&
+        isValidPurePhoto(incoming()) &&
+        incoming().id == photoId;
+      allow delete: if isValidId(photoId);
     }
 
     // --- PPDB Applicants (Schema-Validated Direct Sync) ---

@@ -156,6 +156,17 @@
         "desc": { "type": "string", "maxLength": 800 }
       },
       "required": ["name", "category", "schedule", "coach"]
+    },
+    "PurePhoto": {
+      "title": "PurePhoto",
+      "description": "Koleksi foto murni tanpa keterangan atau narasi",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "imageUrl"]
     }
   },
   "firestore": {
@@ -186,6 +197,10 @@
     "/ekstrakurikuler/{ekskulId}": {
       "schema": "ExtracurricularItem",
       "description": "Daftar program ekstrakurikuler peserta didik"
+    },
+    "/foto_galeri/{photoId}": {
+      "schema": "PurePhoto",
+      "description": "Koleksi foto tanpa keterangan"
     },
     "/ppdb_applicants/{applicantId}": {
       "schema": "PPDBApplicant",

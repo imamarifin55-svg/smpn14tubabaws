@@ -13,6 +13,7 @@ import { TeacherDirectory } from './components/TeacherDirectory';
 import { StudentDirectory } from './components/StudentDirectory';
 import { ActivityGallery } from './components/ActivityGallery';
 import { KegiatanPagiSection } from './components/KegiatanPagiSection';
+import { PurePhotoGallery } from './components/PurePhotoGallery';
 import { AnnouncementsSection } from './components/AnnouncementsSection';
 import { ExtracurricularAndFacilities } from './components/ExtracurricularAndFacilities';
 import { PPDBPortal } from './components/PPDBPortal';
@@ -67,6 +68,9 @@ function SchoolAppContent() {
 
         {/* Submenu Kegiatan Pagi: Program Pembiasaan & Literasi Siswa */}
         <KegiatanPagiSection />
+
+        {/* Submenu Album Foto Murni Tanpa Keterangan */}
+        <PurePhotoGallery />
 
         {/* Pengumuman Akademik & Surat Edaran Resmi */}
         <AnnouncementsSection />

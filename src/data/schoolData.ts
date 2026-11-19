@@ -44,6 +44,12 @@ export interface ExtracurricularItem {
   desc: string;
 }
 
+export interface PurePhotoItem {
+  id: string;
+  imageUrl: string;
+  createdAt?: string;
+}
+
 export interface Announcement {
   id: string;
   title: string;
@@ -794,4 +800,28 @@ export const INITIAL_MORNING_ACTIVITIES: MorningActivity[] = [
     imageUrl: '/src/assets/images/hero_smpn14_building_1792594018035.jpg'
   }
 ];
+
+export const INITIAL_PURE_PHOTOS: PurePhotoItem[] = [
+  {
+    id: 'foto-1',
+    imageUrl: '/src/assets/images/hero_smpn14_building_1792594018035.jpg',
+    createdAt: '2026-10-01T07:00:00.000Z'
+  },
+  {
+    id: 'foto-2',
+    imageUrl: '/src/assets/images/activity_ceremony_1792594019651.jpg',
+    createdAt: '2026-10-02T07:00:00.000Z'
+  },
+  {
+    id: 'foto-3',
+    imageUrl: '/src/assets/images/activity_scout_pramuka_1792594019748.jpg',
+    createdAt: '2026-10-03T07:00:00.000Z'
+  },
+  {
+    id: 'foto-4',
+    imageUrl: '/src/assets/images/activity_science_lab_1792594020856.jpg',
+    createdAt: '2026-10-04T07:00:00.000Z'
+  }
+];
+
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, X, GraduationCap, Phone, FileText, Settings, ChevronDown, Camera, Sun, Users, Compass, LogIn } from 'lucide-react';
+import { Menu, X, GraduationCap, Phone, FileText, Settings, ChevronDown, Camera, Sun, Users, Compass, LogIn, Images } from 'lucide-react';
 import { useSchoolData } from '../context/SchoolDataContext';
 
 interface NavbarProps {
@@ -49,7 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       children: [
         {
           id: 'galeri',
-          label: 'Galeri Foto',
+          label: 'Dokumentasi Kegiatan',
           desc: 'Dokumentasi kegiatan & prestasi siswa',
           icon: Camera
         },
@@ -58,6 +58,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           label: 'Kegiatan Pagi',
           desc: 'Pembiasaan pagi, literasi & senam siswa',
           icon: Sun
+        },
+        {
+          id: 'album-foto',
+          label: 'Album Kegiatan',
+          desc: 'Tampilan foto murni tanpa narasi teks',
+          icon: Images
         }
       ]
     },

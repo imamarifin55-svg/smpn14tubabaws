@@ -128,12 +128,17 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a href="#galeri" className="text-slate-400 hover:text-white transition-colors">
-                  Galeri Foto
+                  Dokumentasi Kegiatan
                 </a>
               </li>
               <li>
                 <a href="#kegiatan-pagi" className="text-slate-400 hover:text-white transition-colors">
                   Kegiatan Pagi
+                </a>
+              </li>
+              <li>
+                <a href="#album-foto" className="text-slate-400 hover:text-white transition-colors">
+                  Album Kegiatan
                 </a>
               </li>
               <li>
