@@ -1,14 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { Bell, Calendar, FileText, Download, Search, X, CheckCircle, ExternalLink } from 'lucide-react';
+import { Bell, Calendar, FileText, Search, X, ExternalLink } from 'lucide-react';
 import { Announcement } from '../data/schoolData';
 import { useSchoolData } from '../context/SchoolDataContext';
 
 export const AnnouncementsSection: React.FC = () => {
-  const { announcements, schoolInfo } = useSchoolData();
+  const { announcements } = useSchoolData();
   const [activeTab, setActiveTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
-  const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null);
 
   const tabs = [
     { id: 'all', label: 'Semua Pengumuman & Berita' },
@@ -29,36 +28,6 @@ export const AnnouncementsSection: React.FC = () => {
       return matchTab && matchSearch;
     });
   }, [announcements, activeTab, searchQuery]);
-
-  const handleDownload = (docName: string, docUrl?: string) => {
-    if (docUrl) {
-      const link = document.createElement('a');
-      link.href = docUrl;
-      link.download = docName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else {
-      // Generate simulated official PDF download
-      const blob = new Blob(
-        [
-          `SURAT RESMI SMP NEGERI 14 TULANG BAWANG BARAT\nNPSN: ${schoolInfo.npsn}\n\nDokumen: ${docName}\n\nIsi Lampiran: Dokumen Resmi Terverifikasi untuk civitas akademika dan orang tua murid.\n\nTanggal Unduh: ${new Date().toLocaleDateString('id-ID')}`
-        ],
-        { type: 'text/plain;charset=utf-8' }
-      );
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = docName.endsWith('.pdf') ? docName.replace('.pdf', '.txt') : docName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }
-
-    setDownloadSuccess(docName);
-    setTimeout(() => setDownloadSuccess(null), 3000);
-  };
 
   return (
     <section id="pengumuman" className="py-16 lg:py-24 bg-slate-50 border-t border-slate-200">
@@ -164,16 +133,6 @@ export const AnnouncementsSection: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
-                  {item.documentName && (
-                    <button
-                      onClick={() => handleDownload(item.documentName!, item.documentUrl)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
-                      title="Unduh Lampiran Resmi"
-                    >
-                      <Download className="w-3.5 h-3.5 text-slate-600" />
-                      <span className="hidden sm:inline">Unduh Lampiran</span>
-                    </button>
-                  )}
                   <button
                     onClick={() => setSelectedAnnouncement(item)}
                     className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-900 hover:bg-blue-800 rounded-lg shadow-xs transition-colors cursor-pointer"
@@ -193,58 +152,26 @@ export const AnnouncementsSection: React.FC = () => {
           )}
         </div>
 
-        {/* Download notification feedback toast */}
-        {downloadSuccess && (
-          <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 text-xs border border-slate-700 animate-in fade-in slide-in-from-bottom-5">
-            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-            <div>
-              <div className="font-semibold text-slate-100">Lampiran berhasil diunduh:</div>
-              <div className="text-slate-300 font-mono text-[11px]">{downloadSuccess}</div>
-            </div>
-          </div>
-        )}
-
-        {/* Official Announcement Modal with School Letterhead */}
+        {/* News & Announcement Detail Modal */}
         {selectedAnnouncement && (
           <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
               <button
                 onClick={() => setSelectedAnnouncement(null)}
                 className="absolute right-4 top-4 p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                aria-label="Tutup surat pengumuman"
+                aria-label="Tutup berita"
               >
                 <X className="w-5 h-5" />
               </button>
 
-              {/* Kop Surat Resmi */}
-              <div className="border-b-2 border-slate-900 pb-4 mb-6 text-center">
-                <div className="text-xs font-bold text-slate-600 uppercase tracking-widest">
-                  Pemerintah Kabupaten Tulang Bawang Barat
-                </div>
-                <div className="text-xs font-semibold text-slate-600 uppercase">
-                  Dinas Pendidikan dan Kebudayaan
-                </div>
-                <div className="text-lg sm:text-xl font-extrabold text-slate-900 mt-1">
-                  SMP NEGERI 14 TULANG BAWANG BARAT
-                </div>
-                <div className="text-[11px] text-slate-500 mt-0.5">
-                  NPSN: {schoolInfo.npsn} · {schoolInfo.address} · Telp: {schoolInfo.phone}
-                </div>
+              {/* Metadata */}
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mb-3 pr-8">
+                <span className="font-semibold text-blue-900">{selectedAnnouncement.category}</span>
+                <span aria-hidden="true">·</span>
+                <span>{selectedAnnouncement.date}</span>
               </div>
 
-              {/* Unboxed Metadata inside Modal */}
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 mb-4 pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-blue-900">{selectedAnnouncement.category}</span>
-                  <span aria-hidden="true">·</span>
-                  <span>Tanggal: {selectedAnnouncement.date}</span>
-                </div>
-                <div className="font-mono text-[11px]">
-                  Ref: TUBABA/SMPN14/2026-X
-                </div>
-              </div>
-
-              <h3 className="text-xl font-bold text-slate-900 leading-snug mb-3">
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 leading-snug mb-4 pr-6">
                 {selectedAnnouncement.title}
               </h3>
 
@@ -258,42 +185,18 @@ export const AnnouncementsSection: React.FC = () => {
                 </div>
               )}
 
-              <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line space-y-4">
+              <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
                 <p>{selectedAnnouncement.content}</p>
-                <p>
-                  Demikian pengumuman ini disampaikan untuk diketahui dan dilaksanakan sebagaimana mestinya. 
-                  Atas perhatian dan kerja sama yang baik dari bapak/ibu orang tua dan seluruh peserta didik, 
-                  kami ucapkan terima kasih.
-                </p>
               </div>
 
-              {/* Signature block */}
-              <div className="mt-8 pt-6 border-t border-slate-200 flex justify-between items-end">
-                <div className="text-xs text-slate-500">
-                  {selectedAnnouncement.documentName && (
-                    <button
-                      onClick={() =>
-                        handleDownload(
-                          selectedAnnouncement.documentName!,
-                          selectedAnnouncement.documentUrl
-                        )
-                      }
-                      className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-900 hover:bg-blue-100 rounded-lg font-semibold transition-colors cursor-pointer"
-                    >
-                      <Download className="w-4 h-4 text-blue-900" />
-                      <span>Unduh {selectedAnnouncement.documentName}</span>
-                    </button>
-                  )}
-                </div>
-
-                <div className="text-right text-xs">
-                  <p className="text-slate-500">Tulang Bawang Barat, {selectedAnnouncement.date}</p>
-                  <p className="font-bold text-slate-900 mt-1">Kepala Sekolah,</p>
-                  <div className="h-12 flex items-center justify-end font-serif italic text-blue-900 font-bold text-sm">
-                    {schoolInfo.headmaster}
-                  </div>
-                  <p className="font-mono text-slate-500">NIP. 19680315 199303 1 004</p>
-                </div>
+              <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedAnnouncement(null)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                >
+                  Tutup
+                </button>
               </div>
             </div>
           </div>
