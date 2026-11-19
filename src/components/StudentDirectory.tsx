@@ -3,16 +3,7 @@ import * as XLSX from 'xlsx';
 import {
   Users,
   Search,
-  UserCheck,
-  Building,
-  GraduationCap,
-  Filter,
-  Download,
-  ChevronRight,
-  ShieldCheck,
-  CheckCircle2,
-  Calendar,
-  Phone
+  Download
 } from 'lucide-react';
 import { useSchoolData } from '../context/SchoolDataContext';
 import { Student } from '../data/schoolData';

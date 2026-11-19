@@ -18,10 +18,8 @@ import {
   Download,
   Upload,
   FileSpreadsheet,
-  FileText,
   Search,
   Check,
-  RefreshCw,
   ImageIcon,
   Paperclip,
   Database,
@@ -84,13 +82,9 @@ export const AdminPanel: React.FC = () => {
     isAdminOpen,
     setIsAdminOpen,
     isAdminAuthenticated,
-    isFirebaseAdmin,
-    firebaseUser,
     cloudAuthError,
     clearCloudAuthError,
     loginAdmin,
-    loginWithGoogleAdmin,
-    loginWithGoogleRedirect,
     logoutAdmin,
     adminInitialTab,
     resetToDefault,
@@ -98,8 +92,6 @@ export const AdminPanel: React.FC = () => {
     isFirebaseConnected,
     syncStatus
   } = useSchoolData();
-
-  const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
 
   const [activeTab, setActiveTab] = useState<'profil' | 'sambutan-visi' | 'guru' | 'peserta-didik' | 'ekstrakurikuler' | 'pengumuman' | 'galeri' | 'kegiatan-pagi' | 'ppdb'>('profil');
   const [successToast, setSuccessToast] = useState<string | null>(null);
@@ -110,12 +102,10 @@ export const AdminPanel: React.FC = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [isGoogleLoginLoading, setIsGoogleLoginLoading] = useState(false);
 
   // Edit modal states for individual records
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [editingMorning, setEditingMorning] = useState<MorningActivity | null>(null);
   const [editingEkskul, setEditingEkskul] = useState<ExtracurricularItem | null>(null);
 
@@ -287,35 +277,17 @@ export const AdminPanel: React.FC = () => {
 
   if (!isAdminOpen) return null;
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
+  const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginUsername.trim() !== 'administrator' || loginPassword !== 'administrator') {
+    const ok = loginAdmin(loginUsername, loginPassword);
+    if (!ok) {
       setLoginError('Username atau password tidak sesuai. Silakan periksa kembali.');
       return;
     }
-
     setLoginError(null);
-    clearCloudAuthError();
-
-    // If Firebase Google Admin is already verified, sign in directly
-    if (isFirebaseAdmin) {
-      loginAdmin(loginUsername, loginPassword);
-      setLoginUsername('');
-      setLoginPassword('');
-      setShowLoginPassword(false);
-      return;
-    }
-
-    // Connect directly to Firebase Auth + Cloud Firestore in one step
-    setIsGoogleLoginLoading(true);
-    const ok = await loginWithGoogleAdmin();
-    setIsGoogleLoginLoading(false);
-
-    if (ok) {
-      setLoginUsername('');
-      setLoginPassword('');
-      setShowLoginPassword(false);
-    }
+    setLoginUsername('');
+    setLoginPassword('');
+    setShowLoginPassword(false);
   };
 
   if (!isAdminAuthenticated) {
@@ -353,7 +325,7 @@ export const AdminPanel: React.FC = () => {
           {/* Login Form */}
           <form onSubmit={handleLoginSubmit} className="p-6 space-y-4 text-xs">
             <p className="text-slate-600 leading-relaxed">
-              Masuk dengan akun pengelola untuk langsung terhubung ke pengaturan website dan sinkronisasi Firebase Cloud Firestore.
+              Masuk dengan akun administrator untuk mengelola seluruh konten website dan menyinkronkannya langsung ke Firebase Firestore.
             </p>
 
             {loginError && (
@@ -363,55 +335,6 @@ export const AdminPanel: React.FC = () => {
               >
                 <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                 <span className="font-medium leading-snug">{loginError}</span>
-              </div>
-            )}
-
-            {cloudAuthError && (
-              <div
-                role="alert"
-                className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] space-y-2.5"
-              >
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <span className="leading-snug">{cloudAuthError}</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                  {isInIframe ? (
-                    <a
-                      href={typeof window !== 'undefined' ? window.location.href : '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold rounded-lg text-[11px] transition-colors"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5 text-amber-300" />
-                      <span>Buka di Tab Browser Baru</span>
-                    </a>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => loginWithGoogleRedirect()}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold rounded-lg text-[11px] transition-colors cursor-pointer"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-                      <span>Login Google Metode Redirect</span>
-                    </button>
-                  )}
-                  {loginUsername.trim() === 'administrator' && loginPassword === 'administrator' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        loginAdmin(loginUsername, loginPassword);
-                        setLoginError(null);
-                        setLoginUsername('');
-                        setLoginPassword('');
-                        setShowLoginPassword(false);
-                      }}
-                      className="text-[11px] font-semibold text-blue-900 hover:underline cursor-pointer"
-                    >
-                      Tetap masuk mode lokal →
-                    </button>
-                  )}
-                </div>
               </div>
             )}
 
@@ -479,39 +402,10 @@ export const AdminPanel: React.FC = () => {
               </button>
               <button
                 type="submit"
-                disabled={isGoogleLoginLoading}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap disabled:opacity-60"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap"
               >
                 <LogIn className="w-4 h-4 text-amber-300" />
-                <span>{isGoogleLoginLoading ? 'Menghubungkan Firebase...' : 'Masuk & Hubungkan'}</span>
-              </button>
-            </div>
-
-            {/* Direct Firebase Auth Google Admin Login */}
-            <div className="pt-3 border-t border-slate-100 space-y-2.5">
-              <div className="text-[11px] text-center text-slate-500 font-medium">
-                atau masuk langsung dengan Akun Google Admin
-              </div>
-              <button
-                type="button"
-                disabled={isGoogleLoginLoading}
-                onClick={async () => {
-                  setLoginError(null);
-                  setIsGoogleLoginLoading(true);
-                  const ok = await loginWithGoogleAdmin();
-                  setIsGoogleLoginLoading(false);
-                  if (ok) {
-                    setLoginUsername('');
-                    setLoginPassword('');
-                    setShowLoginPassword(false);
-                  }
-                }}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-xl font-semibold text-xs transition-colors cursor-pointer disabled:opacity-60"
-              >
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>
-                  {isGoogleLoginLoading ? 'Memverifikasi Google...' : 'Masuk dengan Akun Google Admin'}
-                </span>
+                <span>Masuk</span>
               </button>
             </div>
           </form>
@@ -1271,38 +1165,28 @@ export const AdminPanel: React.FC = () => {
               </h3>
               <p className="text-xs text-slate-400">
                 Sesi Pengelola:{' '}
-                <span className="text-amber-400 font-mono">
-                  {isFirebaseAdmin && firebaseUser?.email ? firebaseUser.email : 'administrator'}
-                </span>
+                <span className="text-amber-400 font-mono">administrator</span>
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {isFirebaseAdmin ? (
-              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 text-[11px] font-medium">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Firebase Auth Terverifikasi</span>
-              </div>
-            ) : (
-              <button
-                type="button"
-                disabled={isGoogleLoginLoading}
-                onClick={async () => {
-                  setIsGoogleLoginLoading(true);
-                  const ok = await loginWithGoogleAdmin();
-                  setIsGoogleLoginLoading(false);
-                  if (ok) {
-                    showSuccess('Firebase Auth Admin berhasil terhubung!');
-                  }
-                }}
-                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-300 text-[11px] font-semibold transition-colors cursor-pointer whitespace-nowrap"
-                title="Hubungkan Akun Google Admin agar penulisan Firestore diizinkan oleh aturan keamanan"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>{isGoogleLoginLoading ? 'Memverifikasi...' : 'Hubungkan Google Admin'}</span>
-              </button>
-            )}
+            <div
+              className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium ${
+                isFirebaseConnected && syncStatus !== 'offline'
+                  ? 'bg-emerald-950/80 border-emerald-700/60 text-emerald-300'
+                  : 'bg-amber-950/80 border-amber-700/60 text-amber-300'
+              }`}
+            >
+              <Database className="w-3.5 h-3.5" />
+              <span>
+                {syncStatus === 'syncing'
+                  ? 'Menyinkronkan Cloud...'
+                  : isFirebaseConnected && syncStatus !== 'offline'
+                  ? 'Firebase Firestore Terhubung'
+                  : 'Mode Lokal (Cek Koneksi)'}
+              </span>
+            </div>
 
             <button
               onClick={() => {
@@ -1542,54 +1426,7 @@ export const AdminPanel: React.FC = () => {
 
           {/* Right Main Content Body */}
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50/50">
-            {/* Firebase Auth Security Verification Banner */}
-            {!isFirebaseAdmin && (
-              <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div className="flex items-start gap-2.5">
-                  <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-                  <div className="space-y-0.5">
-                    <div className="font-bold text-slate-900">
-                      Verifikasi Firebase Auth Diperlukan untuk Simpan ke Cloud
-                    </div>
-                    <p className="text-slate-700 leading-relaxed">
-                      {cloudAuthError ||
-                        'Aturan keamanan Firestore aktif (hanya admin terverifikasi yang dapat menulis data). Hubungkan akun Google Admin (imamarifin55@admin.smp.belajar.id) agar perubahan tersimpan permanen ke server cloud.'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  {isInIframe && (
-                    <a
-                      href={typeof window !== 'undefined' ? window.location.href : '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-amber-300 font-semibold rounded-xl transition-colors whitespace-nowrap"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5 text-blue-900" />
-                      <span>Buka di Tab Baru</span>
-                    </a>
-                  )}
-                  <button
-                    type="button"
-                    disabled={isGoogleLoginLoading}
-                    onClick={async () => {
-                      setIsGoogleLoginLoading(true);
-                      const ok = await loginWithGoogleAdmin();
-                      setIsGoogleLoginLoading(false);
-                      if (ok) {
-                        showSuccess('Akun Google Admin terverifikasi! Siap sinkronisasi ke Firestore.');
-                      }
-                    }}
-                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-semibold rounded-xl transition-colors cursor-pointer whitespace-nowrap disabled:opacity-60"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-                    <span>{isGoogleLoginLoading ? 'Memverifikasi...' : 'Hubungkan Google Admin'}</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {isFirebaseAdmin && cloudAuthError && (
+            {cloudAuthError && (
               <div
                 role="alert"
                 className="mb-6 bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start justify-between gap-3 text-xs text-rose-900"

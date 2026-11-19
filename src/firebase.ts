@@ -1,12 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  signOut
-} from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -15,16 +8,6 @@ const app = initializeApp(firebaseConfig);
 // CRITICAL: Connect to the specific firestoreDatabaseId provisioned
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({
-  prompt: 'select_account',
-  login_hint: 'imamarifin55@admin.smp.belajar.id'
-});
-
-export const signInWithGoogleAdmin = () => signInWithPopup(auth, googleProvider);
-export const signInWithGoogleAdminRedirect = () => signInWithRedirect(auth, googleProvider);
-export const checkGoogleRedirectResult = () => getRedirectResult(auth);
-export const signOutFirebase = () => signOut(auth);
 
 export enum OperationType {
   CREATE = 'create',

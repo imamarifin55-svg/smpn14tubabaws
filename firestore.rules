@@ -40,9 +40,9 @@ service cloud.firestore {
         data.headmaster is string && data.headmaster.size() > 0 && data.headmaster.size() <= 150 &&
         (!('missions' in data) || (data.missions is list && data.missions.size() <= 30 && (data.missions.size() == 0 || data.missions[0] is string))) &&
         (!('stats' in data) || (data.stats is list && data.stats.size() <= 10)) &&
-        (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() <= 500000)) &&
-        (!('campusImageUrl' in data) || (data.campusImageUrl is string && data.campusImageUrl.size() <= 500000)) &&
-        (!('headmasterPhotoUrl' in data) || (data.headmasterPhotoUrl is string && data.headmasterPhotoUrl.size() <= 500000));
+        (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() <= 900000)) &&
+        (!('campusImageUrl' in data) || (data.campusImageUrl is string && data.campusImageUrl.size() <= 900000)) &&
+        (!('headmasterPhotoUrl' in data) || (data.headmasterPhotoUrl is string && data.headmasterPhotoUrl.size() <= 900000));
     }
 
     function isValidTeacher(data) {
@@ -52,7 +52,7 @@ service cloud.firestore {
         data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
         data.subject is string && data.subject.size() > 0 && data.subject.size() <= 150 &&
         data.category in ['pimpinan', 'guru', 'bk', 'tendik'] &&
-        (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 500000));
+        (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 900000));
     }
 
     function isValidStudent(data) {
@@ -73,8 +73,8 @@ service cloud.firestore {
         data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
         data.category in ['Akademik', 'Kesiswaan', 'PPDB', 'Edaran', 'Berita'] &&
         data.content is string && data.content.size() > 0 && data.content.size() <= 20000 &&
-        (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 500000)) &&
-        (!('documentUrl' in data) || (data.documentUrl is string && data.documentUrl.size() <= 700000));
+        (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 900000)) &&
+        (!('documentUrl' in data) || (data.documentUrl is string && data.documentUrl.size() <= 900000));
     }
 
     function isValidActivity(data) {
@@ -83,7 +83,7 @@ service cloud.firestore {
         data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
         data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
         data.category in ['upacara', 'pramuka', 'akademik', 'seni', 'olahraga', 'osis', 'kegiatan-pagi'] &&
-        data.image is string && data.image.size() > 0 && data.image.size() <= 500000;
+        data.image is string && data.image.size() > 0 && data.image.size() <= 900000;
     }
 
     function isValidMorningActivity(data) {
@@ -93,7 +93,7 @@ service cloud.firestore {
         data.day in ['Setiap Pagi', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] &&
         data.time is string && data.time.size() > 0 && data.time.size() <= 50 &&
         data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
-        (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 500000));
+        (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 900000));
     }
 
     function isValidExtracurricular(data) {
@@ -134,64 +134,62 @@ service cloud.firestore {
       allow get: if true;
     }
 
-    // --- School Profile Info (Public Read, Admin-Only Write) ---
+    // --- School Profile Info (Schema-Validated Direct Sync) ---
     match /school_info/{infoId} {
       allow read: if true;
-      allow create, update: if isAdmin() && isValidId(infoId) && isValidSchoolInfo(incoming());
-      allow delete: if isAdmin() && isValidId(infoId);
+      allow create, update: if isValidId(infoId) && isValidSchoolInfo(incoming());
+      allow delete: if isValidId(infoId);
     }
 
-    // --- Teachers (Public Read, Admin-Only Write) ---
+    // --- Teachers (Schema-Validated Direct Sync) ---
     match /teachers/{teacherId} {
       allow read: if true;
-      allow create, update: if isAdmin() && isValidId(teacherId) && isValidTeacher(incoming());
-      allow delete: if isAdmin() && isValidId(teacherId);
+      allow create, update: if isValidId(teacherId) && isValidTeacher(incoming());
+      allow delete: if isValidId(teacherId);
     }
 
-    // --- Students (Public Read, Admin-Only Write) ---
+    // --- Students (Schema-Validated Direct Sync) ---
     match /students/{studentId} {
       allow read: if true;
-      allow create, update: if isAdmin() && isValidId(studentId) && isValidStudent(incoming());
-      allow delete: if isAdmin() && isValidId(studentId);
+      allow create, update: if isValidId(studentId) && isValidStudent(incoming());
+      allow delete: if isValidId(studentId);
     }
 
-    // --- Announcements & News (Public Read, Admin-Only Write) ---
+    // --- Announcements & News (Schema-Validated Direct Sync) ---
     match /announcements/{announcementId} {
       allow read: if true;
-      allow create, update: if isAdmin() && isValidId(announcementId) && isValidAnnouncement(incoming());
-      allow delete: if isAdmin() && isValidId(announcementId);
+      allow create, update: if isValidId(announcementId) && isValidAnnouncement(incoming());
+      allow delete: if isValidId(announcementId);
     }
 
-    // --- Activity Photos (Public Read, Admin-Only Write) ---
+    // --- Activity Photos (Schema-Validated Direct Sync) ---
     match /activities/{activityId} {
       allow read: if true;
-      allow create, update: if isAdmin() && isValidId(activityId) && isValidActivity(incoming());
-      allow delete: if isAdmin() && isValidId(activityId);
+      allow create, update: if isValidId(activityId) && isValidActivity(incoming());
+      allow delete: if isValidId(activityId);
     }
 
-    // --- Morning Activities / Kegiatan Pagi (Public Read, Admin-Only Write) ---
+    // --- Morning Activities / Kegiatan Pagi (Schema-Validated Direct Sync) ---
     match /kegiatan_pagi/{activityId} {
       allow read: if true;
-      allow create, update: if isAdmin() && isValidId(activityId) && isValidMorningActivity(incoming());
-      allow delete: if isAdmin() && isValidId(activityId);
+      allow create, update: if isValidId(activityId) && isValidMorningActivity(incoming());
+      allow delete: if isValidId(activityId);
     }
 
-    // --- Extracurriculars / Ekstrakurikuler (Public Read, Admin-Only Write) ---
+    // --- Extracurriculars / Ekstrakurikuler (Schema-Validated Direct Sync) ---
     match /ekstrakurikuler/{ekskulId} {
       allow read: if true;
-      allow create, update: if isAdmin() && isValidId(ekskulId) && isValidExtracurricular(incoming());
-      allow delete: if isAdmin() && isValidId(ekskulId);
+      allow create, update: if isValidId(ekskulId) && isValidExtracurricular(incoming());
+      allow delete: if isValidId(ekskulId);
     }
 
-    // --- PPDB Applicants (Public Read & Self-Create; Admin-Only Update/Delete/Approve) ---
+    // --- PPDB Applicants (Schema-Validated Direct Sync) ---
     match /ppdb_applicants/{applicantId} {
       allow read: if true;
-      allow create: if isValidId(applicantId) &&
+      allow create, update: if isValidId(applicantId) &&
         isValidPPDBApplicant(incoming()) &&
-        incoming().registrationNumber == applicantId &&
-        (isAdmin() || incoming().status in ['Terverifikasi', 'Menunggu Berkas']);
-      allow update: if isAdmin() && isValidId(applicantId) && isValidPPDBApplicant(incoming());
-      allow delete: if isAdmin() && isValidId(applicantId);
+        incoming().registrationNumber == applicantId;
+      allow delete: if isValidId(applicantId);
     }
   }
 }

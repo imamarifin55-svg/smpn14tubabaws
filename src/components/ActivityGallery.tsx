@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { Camera, Calendar, MapPin, X, ChevronLeft, ChevronRight, Download, Share2, Check } from 'lucide-react';
-import { ActivityPhoto } from '../data/schoolData';
 import { useSchoolData } from '../context/SchoolDataContext';
 
 export const ActivityGallery: React.FC = () => {

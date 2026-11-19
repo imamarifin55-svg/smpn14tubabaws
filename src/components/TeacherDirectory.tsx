@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Mail, BookOpen, GraduationCap, Clock, Award, X, CheckCircle2 } from 'lucide-react';
+import { Search, BookOpen, GraduationCap, Clock, X, CheckCircle2 } from 'lucide-react';
 import { Teacher } from '../data/schoolData';
 import { useSchoolData } from '../context/SchoolDataContext';
 

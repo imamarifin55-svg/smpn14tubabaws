@@ -5,11 +5,9 @@ import {
   Search,
   CheckCircle2,
   Printer,
-  Calendar,
   Shield,
   HelpCircle,
   Clock,
-  MapPin,
   Upload,
   AlertCircle
 } from 'lucide-react';
