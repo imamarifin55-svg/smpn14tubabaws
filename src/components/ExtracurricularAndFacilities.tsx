@@ -95,18 +95,20 @@ export const ExtracurricularAndFacilities: React.FC = () => {
                     </span>
                   </div>
 
-                  <h3 className="text-base font-bold text-slate-900 mb-2">
+                  <h3 className="text-base font-bold text-slate-900 mb-2 break-words">
                     {extra.name}
                   </h3>
 
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
-                    {extra.desc}
-                  </p>
+                  <div className="max-h-44 overflow-y-auto pr-1.5 mb-4">
+                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line break-words">
+                      {extra.desc}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="pt-3 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-500">
                   <UserCheck className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                  <span><strong>Pembina:</strong> {extra.coach}</span>
+                  <span className="break-words"><strong>Pembina:</strong> {extra.coach}</span>
                 </div>
               </div>
             ))}
@@ -125,11 +127,11 @@ export const ExtracurricularAndFacilities: React.FC = () => {
                   {facilityIcons[facility.icon] || <Building className="w-5 h-5 text-blue-900" />}
                 </div>
 
-                <h3 className="text-base font-bold text-slate-900 mb-2">
+                <h3 className="text-base font-bold text-slate-900 mb-2 break-words">
                   {facility.title}
                 </h3>
 
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line break-words">
                   {facility.desc}
                 </p>
               </div>

@@ -141,18 +141,23 @@ export const ActivityGallery: React.FC = () => {
 
         {/* Lightbox Modal */}
         {activePhoto && (
-          <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6">
-            <div className="relative max-w-5xl w-full bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-800 text-white animate-in fade-in zoom-in-95 duration-200">
-              {/* Modal Top Bar */}
-              <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/90">
-                <div className="flex items-center gap-2 text-xs text-slate-300">
+          <div
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setActivePhotoIndex(null);
+            }}
+            className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+          >
+            <div className="relative max-w-5xl w-full max-h-[92vh] flex flex-col bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-800 text-white animate-in fade-in zoom-in-95 duration-200">
+              {/* Modal Top Bar (Sticky / Fixed inside Modal) */}
+              <div className="shrink-0 flex items-center justify-between gap-3 p-4 border-b border-slate-800 bg-slate-900/95">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-300 min-w-0">
                   <span className="font-semibold text-amber-400">{activePhoto.categoryLabel}</span>
                   <span aria-hidden="true">·</span>
                   <span>{activePhoto.date}</span>
                   <span aria-hidden="true">·</span>
-                  <span>{activePhoto.location}</span>
+                  <span className="truncate max-w-[200px] sm:max-w-xs">{activePhoto.location}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={handleShare}
                     className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-1.5 text-xs cursor-pointer"
@@ -180,54 +185,58 @@ export const ActivityGallery: React.FC = () => {
                 </div>
               </div>
 
-              {/* Main Photo View with Nav Controls */}
-              <div className="relative bg-black flex items-center justify-center min-h-[320px] max-h-[65vh] overflow-hidden">
-                <img
-                  src={activePhoto.image}
-                  alt={activePhoto.title}
-                  className="max-h-[65vh] w-auto max-w-full object-contain mx-auto"
-                />
+              {/* Scrollable Content Body (Photo + Long Activity Narrative) */}
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+                {/* Main Photo View with Nav Controls */}
+                <div className="relative bg-black flex items-center justify-center min-h-[240px] sm:min-h-[320px] max-h-[58vh] overflow-hidden">
+                  <img
+                    src={activePhoto.image}
+                    alt={activePhoto.title}
+                    referrerPolicy="no-referrer"
+                    className="max-h-[58vh] w-auto max-w-full object-contain mx-auto"
+                  />
 
-                {/* Left Button */}
-                <button
-                  onClick={handlePrev}
-                  className="absolute left-4 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer"
-                  aria-label="Foto sebelumnya"
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
-
-                {/* Right Button */}
-                <button
-                  onClick={handleNext}
-                  className="absolute right-4 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer"
-                  aria-label="Foto berikutnya"
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
-              </div>
-
-              {/* Caption & Description Footer */}
-              <div className="p-6 bg-slate-900 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="max-w-3xl">
-                  <h3 className="text-base sm:text-lg font-bold text-white mb-1">
-                    {activePhoto.title}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    {activePhoto.caption}
-                  </p>
-                </div>
-                <div className="shrink-0 flex items-center gap-3">
-                  <a
-                    href={activePhoto.image}
-                    download={`SMPN14_${activePhoto.id}.jpg`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition-colors"
+                  {/* Left Button */}
+                  <button
+                    onClick={handlePrev}
+                    className="absolute left-3 sm:left-4 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer"
+                    aria-label="Foto sebelumnya"
                   >
-                    <Download className="w-4 h-4 text-amber-400" />
-                    <span>Buka Resolusi Penuh</span>
-                  </a>
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+
+                  {/* Right Button */}
+                  <button
+                    onClick={handleNext}
+                    className="absolute right-3 sm:right-4 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer"
+                    aria-label="Foto berikutnya"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                </div>
+
+                {/* Caption & Description Footer */}
+                <div className="p-5 sm:p-6 bg-slate-900 border-t border-slate-800 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="max-w-3xl min-w-0 flex-1">
+                    <h3 className="text-base sm:text-lg font-bold text-white mb-2 break-words">
+                      {activePhoto.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line break-words">
+                      {activePhoto.caption}
+                    </p>
+                  </div>
+                  <div className="shrink-0 flex items-center gap-3 pt-1">
+                    <a
+                      href={activePhoto.image}
+                      download={`SMPN14_${activePhoto.id}.jpg`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      <Download className="w-4 h-4 text-amber-400" />
+                      <span>Buka Resolusi Penuh</span>
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>

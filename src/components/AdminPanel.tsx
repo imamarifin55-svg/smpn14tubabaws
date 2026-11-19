@@ -2825,11 +2825,11 @@ export const AdminPanel: React.FC = () => {
                     <div className="sm:col-span-2">
                       <label className="font-semibold text-slate-700 block mb-1">Deskripsi Kegiatan &amp; Materi</label>
                       <textarea
-                        rows={2}
+                        rows={4}
                         placeholder="Jelaskan fokus pembinaan, prestasi, dan keterampilan yang dilatih..."
                         value={newEkskul.desc}
                         onChange={(e) => setNewEkskul({ ...newEkskul, desc: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden resize-y"
                       />
                     </div>
                   </div>
@@ -3054,12 +3054,12 @@ export const AdminPanel: React.FC = () => {
                     <div className="sm:col-span-2">
                       <label className="font-semibold text-slate-700 block mb-1">Isi Lengkap Surat Pengumuman / Berita *</label>
                       <textarea
-                        rows={3}
+                        rows={4}
                         required
                         placeholder="Tuliskan isi pengumuman atau berita secara mendetail..."
                         value={newAnnouncement.content}
                         onChange={(e) => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden resize-y"
                       />
                     </div>
                   </div>
@@ -3247,11 +3247,11 @@ export const AdminPanel: React.FC = () => {
                     <div className="sm:col-span-2">
                       <label className="font-semibold text-slate-700 block mb-1">Keterangan / Narasi Foto</label>
                       <textarea
-                        rows={2}
+                        rows={4}
                         placeholder="Deskripsikan keseruan dan tujuan kegiatan..."
                         value={newActivity.caption}
                         onChange={(e) => setNewActivity({ ...newActivity, caption: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden resize-y"
                       />
                     </div>
                   </div>
@@ -3428,11 +3428,11 @@ export const AdminPanel: React.FC = () => {
                     <div className="sm:col-span-2">
                       <label className="font-semibold text-slate-700 block mb-1">Deskripsi Kegiatan</label>
                       <textarea
-                        rows={2}
+                        rows={4}
                         placeholder="Jelaskan rangkaian pembiasaan pagi dan tujuan karakter bagi siswa..."
                         value={newMorning.description}
                         onChange={(e) => setNewMorning({ ...newMorning, description: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 focus:outline-hidden resize-y"
                       />
                     </div>
                   </div>
@@ -3581,8 +3581,8 @@ export const AdminPanel: React.FC = () => {
         {/* Modal Edit Data Guru */}
         {editingTeacher && (
           <div className="fixed inset-0 z-60 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-xl p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+              <div className="shrink-0 flex items-center justify-between border-b border-slate-200 px-6 py-4">
                 <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                   <Edit3 className="w-4 h-4 text-blue-900" />
                   <span>Edit Data Guru / Tenaga Pendidik</span>
@@ -3604,7 +3604,7 @@ export const AdminPanel: React.FC = () => {
                   showSuccess(`Data guru ${editingTeacher.name} berhasil diperbarui!`);
                   setEditingTeacher(null);
                 }}
-                className="space-y-3 text-xs"
+                className="flex-1 min-h-0 overflow-y-auto p-6 space-y-3 text-xs"
               >
                 <div>
                   <label className="font-semibold text-slate-700 block mb-1">Nama Lengkap &amp; Gelar</label>
@@ -3698,8 +3698,8 @@ export const AdminPanel: React.FC = () => {
         {/* Modal Edit Data Siswa */}
         {editingStudent && (
           <div className="fixed inset-0 z-60 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-xl p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+              <div className="shrink-0 flex items-center justify-between border-b border-slate-200 px-6 py-4">
                 <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                   <Edit3 className="w-4 h-4 text-blue-900" />
                   <span>Edit Data Peserta Didik</span>
@@ -3721,7 +3721,7 @@ export const AdminPanel: React.FC = () => {
                   showSuccess(`Data siswa ${editingStudent.fullName} berhasil diperbarui!`);
                   setEditingStudent(null);
                 }}
-                className="space-y-3 text-xs"
+                className="flex-1 min-h-0 overflow-y-auto p-6 space-y-3 text-xs"
               >
                 <div>
                   <label className="font-semibold text-slate-700 block mb-1">Nama Lengkap Siswa</label>
@@ -3846,8 +3846,8 @@ export const AdminPanel: React.FC = () => {
         {/* Modal Edit Kegiatan Pagi */}
         {editingMorning && (
           <div className="fixed inset-0 z-60 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-xl p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+              <div className="shrink-0 flex items-center justify-between border-b border-slate-200 px-6 py-4">
                 <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                   <Sun className="w-4 h-4 text-amber-500" />
                   <span>Edit Program Kegiatan Pagi</span>
@@ -3867,7 +3867,7 @@ export const AdminPanel: React.FC = () => {
                   setEditingMorning(null);
                   showSuccess('Perubahan kegiatan pagi berhasil disimpan!');
                 }}
-                className="space-y-3 text-xs"
+                className="flex-1 min-h-0 overflow-y-auto p-6 space-y-3 text-xs"
               >
                 <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
                   <div className="w-20 h-16 rounded-lg bg-white border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
@@ -3967,10 +3967,10 @@ export const AdminPanel: React.FC = () => {
                 <div>
                   <label className="font-semibold text-slate-700 block mb-1">Deskripsi</label>
                   <textarea
-                    rows={3}
+                    rows={4}
                     value={editingMorning.description}
                     onChange={(e) => setEditingMorning({ ...editingMorning, description: e.target.value })}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 resize-y"
                   />
                 </div>
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
@@ -3997,8 +3997,8 @@ export const AdminPanel: React.FC = () => {
         {/* Modal Edit Ekstrakurikuler */}
         {editingEkskul && (
           <div className="fixed inset-0 z-60 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-xl p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+              <div className="shrink-0 flex items-center justify-between border-b border-slate-200 px-6 py-4">
                 <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                   <Compass className="w-4 h-4 text-amber-600" />
                   <span>Edit Program Ekstrakurikuler</span>
@@ -4019,7 +4019,7 @@ export const AdminPanel: React.FC = () => {
                   setEditingEkskul(null);
                   showSuccess(`Ekstrakurikuler "${editingEkskul.name}" berhasil diperbarui!`);
                 }}
-                className="space-y-3 text-xs"
+                className="flex-1 min-h-0 overflow-y-auto p-6 space-y-3 text-xs"
               >
                 <div>
                   <label className="font-semibold text-slate-700 block mb-1">Nama Ekstrakurikuler</label>
@@ -4072,10 +4072,10 @@ export const AdminPanel: React.FC = () => {
                 <div>
                   <label className="font-semibold text-slate-700 block mb-1">Deskripsi Kegiatan</label>
                   <textarea
-                    rows={3}
+                    rows={4}
                     value={editingEkskul.desc}
                     onChange={(e) => setEditingEkskul({ ...editingEkskul, desc: e.target.value })}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-900 resize-y"
                   />
                 </div>
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">

@@ -154,46 +154,56 @@ export const AnnouncementsSection: React.FC = () => {
 
         {/* News & Announcement Detail Modal */}
         {selectedAnnouncement && (
-          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
-              <button
-                onClick={() => setSelectedAnnouncement(null)}
-                className="absolute right-4 top-4 p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                aria-label="Tutup berita"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              {/* Metadata */}
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mb-3 pr-8">
-                <span className="font-semibold text-blue-900">{selectedAnnouncement.category}</span>
-                <span aria-hidden="true">·</span>
-                <span>{selectedAnnouncement.date}</span>
-              </div>
-
-              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 leading-snug mb-4 pr-6">
-                {selectedAnnouncement.title}
-              </h3>
-
-              {selectedAnnouncement.imageUrl && (
-                <div className="rounded-xl overflow-hidden border border-slate-200 mb-5 max-h-80 bg-slate-100">
-                  <img
-                    src={selectedAnnouncement.imageUrl}
-                    alt={selectedAnnouncement.title}
-                    className="w-full h-full object-cover"
-                  />
+          <div
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelectedAnnouncement(null);
+            }}
+            className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+          >
+            <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 relative max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {/* Fixed Modal Header */}
+              <div className="shrink-0 flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100 bg-white">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 min-w-0">
+                  <span className="font-semibold text-blue-900">{selectedAnnouncement.category}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{selectedAnnouncement.date}</span>
                 </div>
-              )}
-
-              <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                <p>{selectedAnnouncement.content}</p>
+                <button
+                  onClick={() => setSelectedAnnouncement(null)}
+                  className="shrink-0 p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                  aria-label="Tutup berita"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
+              {/* Scrollable Narrative Body */}
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-6 sm:p-8 space-y-4">
+                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 leading-snug break-words">
+                  {selectedAnnouncement.title}
+                </h3>
+
+                {selectedAnnouncement.imageUrl && (
+                  <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
+                    <img
+                      src={selectedAnnouncement.imageUrl}
+                      alt={selectedAnnouncement.title}
+                      className="w-full max-h-80 object-cover"
+                    />
+                  </div>
+                )}
+
+                <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line break-words">
+                  <p>{selectedAnnouncement.content}</p>
+                </div>
+              </div>
+
+              {/* Fixed Modal Footer */}
+              <div className="shrink-0 px-6 py-3.5 border-t border-slate-100 bg-slate-50/70 flex justify-end">
                 <button
                   type="button"
                   onClick={() => setSelectedAnnouncement(null)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                 >
                   Tutup
                 </button>

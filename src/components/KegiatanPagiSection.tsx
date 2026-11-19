@@ -174,68 +174,77 @@ export const KegiatanPagiSection: React.FC = () => {
 
         {/* Detail / Photo Modal */}
         {activeItem && (
-          <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6">
-            <div className="relative max-w-4xl w-full bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-800 text-white animate-in fade-in zoom-in-95 duration-200">
-              <div className="flex items-center justify-between p-4 border-b border-slate-800">
-                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300 tabular-nums">
+          <div
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setActiveIndex(null);
+            }}
+            className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+          >
+            <div className="relative max-w-4xl w-full max-h-[92vh] flex flex-col bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-800 text-white animate-in fade-in zoom-in-95 duration-200">
+              <div className="shrink-0 flex items-center justify-between gap-3 p-4 border-b border-slate-800 bg-slate-900/95">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-300 tabular-nums min-w-0">
                   <span className="font-semibold text-amber-400">{activeItem.day}</span>
                   <span aria-hidden="true">·</span>
                   <span>{activeItem.time}</span>
                   <span aria-hidden="true">·</span>
-                  <span>{activeItem.location}</span>
+                  <span className="truncate max-w-[200px] sm:max-w-xs">{activeItem.location}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setActiveIndex(null)}
-                  className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                  className="shrink-0 p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                   aria-label="Tutup detail kegiatan pagi"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="relative bg-black flex items-center justify-center min-h-[280px] max-h-[60vh] overflow-hidden">
-                {activeItem.imageUrl ? (
-                  <img
-                    src={activeItem.imageUrl}
-                    alt={activeItem.title}
-                    referrerPolicy="no-referrer"
-                    className="max-h-[60vh] w-auto max-w-full object-contain mx-auto"
-                  />
-                ) : (
-                  <div className="p-12 text-center text-slate-300">
-                    <Sun className="w-12 h-12 text-amber-400 mx-auto mb-3" />
-                    <p className="text-sm font-semibold">{activeItem.title}</p>
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+                <div className="relative bg-black flex items-center justify-center min-h-[220px] sm:min-h-[280px] max-h-[55vh] overflow-hidden">
+                  {activeItem.imageUrl ? (
+                    <img
+                      src={activeItem.imageUrl}
+                      alt={activeItem.title}
+                      referrerPolicy="no-referrer"
+                      className="max-h-[55vh] w-auto max-w-full object-contain mx-auto"
+                    />
+                  ) : (
+                    <div className="p-12 text-center text-slate-300">
+                      <Sun className="w-12 h-12 text-amber-400 mx-auto mb-3" />
+                      <p className="text-sm font-semibold">{activeItem.title}</p>
+                    </div>
+                  )}
+
+                  {filteredItems.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handlePrev}
+                        className="absolute left-3 sm:left-4 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer"
+                        aria-label="Kegiatan sebelumnya"
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleNext}
+                        className="absolute right-3 sm:right-4 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer"
+                        aria-label="Kegiatan berikutnya"
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                <div className="p-5 sm:p-6 bg-slate-900 border-t border-slate-800 space-y-2.5">
+                  <h3 className="text-base sm:text-lg font-bold text-white break-words">{activeItem.title}</h3>
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line break-words">
+                    {activeItem.description}
+                  </p>
+                  <div className="pt-2 text-xs text-slate-400 border-t border-slate-800/80">
+                    Penanggung Jawab / Pembina: <span className="text-amber-300 font-medium">{activeItem.coordinator}</span>
                   </div>
-                )}
-
-                {filteredItems.length > 1 && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handlePrev}
-                      className="absolute left-4 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer"
-                      aria-label="Kegiatan sebelumnya"
-                    >
-                      <ChevronLeft className="w-6 h-6" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleNext}
-                      className="absolute right-4 p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer"
-                      aria-label="Kegiatan berikutnya"
-                    >
-                      <ChevronRight className="w-6 h-6" />
-                    </button>
-                  </>
-                )}
-              </div>
-
-              <div className="p-6 bg-slate-900 border-t border-slate-800 space-y-2">
-                <h3 className="text-lg font-bold text-white">{activeItem.title}</h3>
-                <p className="text-sm text-slate-300 leading-relaxed">{activeItem.description}</p>
-                <div className="pt-2 text-xs text-slate-400">
-                  Penanggung Jawab / Pembina: <span className="text-amber-300 font-medium">{activeItem.coordinator}</span>
                 </div>
               </div>
             </div>
